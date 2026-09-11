@@ -1,0 +1,9 @@
+.worktrees/
+.env
+data/
+dist/
+node_modules/
+coverage/
+web/dist/
+*.log
+
