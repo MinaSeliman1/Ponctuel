@@ -115,6 +115,7 @@ jobs:
           version: v3.17.3
       - run: helm lint deploy/k8s/chart/ponctuel
       - run: helm template ponctuel deploy/k8s/chart/ponctuel > /tmp/ponctuel-k8s.yaml
-      - run: test "$(grep -c '^kind: ' /tmp/ponctuel-k8s.yaml)" -ge 12
+      - run: |
+          test "$(grep -c '^kind: ' /tmp/ponctuel-k8s.yaml)" -ge 12
       - run: '! helm template ponctuel deploy/k8s/chart/ponctuel --show-only templates/configmap.yaml | grep -q "  STM_API_KEY:"'
 
