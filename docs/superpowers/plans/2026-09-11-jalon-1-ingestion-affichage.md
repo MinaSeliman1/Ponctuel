@@ -272,22 +272,22 @@ git commit -m "feat: persist GTFS realtime events in TimescaleDB"
 - `GET /readyz` returns 200 only when database ping succeeds and config is valid.
 - `GET /metrics` exposes Prometheus text format.
 
-- [ ] **Step 1: Write failing configuration and runner tests**
+- [x] **Step 1: Write failing configuration and runner tests**
 
 Test default 30-second polling, fixture mode without a key, STM mode failing without a key, API key redaction in errors, immediate first collection, cancellation of the ticker and no duplicate inserts when a fetch returns the same hash twice.
 
 Run: `docker run --rm -v "${PWD}:/src" -w /src golang:1.27.1 go test ./services/ingester/config ./services/ingester/runner -v`  
 Expected: FAIL because config and runner do not exist.
 
-- [ ] **Step 2: Implement configuration and one collection cycle**
+- [x] **Step 2: Implement configuration and one collection cycle**
 
 Use typed `time.Duration`, URL parsing and explicit mode validation. The runner sequence is `fetch -> decode -> normalize -> insert snapshot -> insert events -> observe metrics`. A duplicate snapshot increments a duplicate counter and skips event insertion entirely.
 
-- [ ] **Step 3: Add ticker, graceful shutdown and HTTP health**
+- [x] **Step 3: Add ticker, graceful shutdown and HTTP health**
 
 Use `context.WithCancel`, `signal.NotifyContext`, `time.NewTicker`, and a bounded database ping timeout. `/readyz` must not report ready when the database is down. Metrics must include counters for fetches, parse errors, duplicates, inserted events and upstream status classes.
 
-- [ ] **Step 4: Run service tests and binary build**
+- [x] **Step 4: Run service tests and binary build**
 
 Run:
 
@@ -298,7 +298,7 @@ docker run --rm -v "${PWD}:/src" -w /src golang:1.27.1 go build -o /tmp/ingester
 
 Expected: PASS and a successful Linux binary build.
 
-- [ ] **Step 5: Commit the ingester**
+- [x] **Step 5: Commit the ingester**
 
 ```powershell
 git add services/ingester cmd/ingester
