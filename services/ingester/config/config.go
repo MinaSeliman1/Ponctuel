@@ -22,6 +22,7 @@ const (
 	defaultRawDataDirectory = "./data/raw"
 	defaultRedpandaGroupID  = "ponctuel-matcher"
 	defaultGeofenceRadius   = 60.0
+	defaultMatcherHTTPAddr  = ":8082"
 )
 
 type Config struct {
@@ -39,6 +40,8 @@ type Config struct {
 	RedpandaBrokers      []string
 	RedpandaGroupID      string
 	GeofenceRadiusMeters float64
+	MatcherHTTPAddr      string
+	MatcherStopsFile     string
 }
 
 func Load() (Config, error) {
@@ -62,6 +65,8 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 		STMAPIKeyHeader:   valueOr(lookup, "STM_API_KEY_HEADER", defaultAPIKeyHeader),
 		RedpandaBrokers:   csvValues(valueOr(lookup, "REDPANDA_BROKERS", "")),
 		RedpandaGroupID:   valueOr(lookup, "REDPANDA_GROUP_ID", defaultRedpandaGroupID),
+		MatcherHTTPAddr:   valueOr(lookup, "MATCHER_HTTP_ADDR", defaultMatcherHTTPAddr),
+		MatcherStopsFile:  valueOr(lookup, "MATCHER_STOPS_FILE", ""),
 	}
 
 	var err error

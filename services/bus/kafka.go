@@ -15,6 +15,12 @@ type Publisher interface {
 	Close() error
 }
 
+type Reader interface {
+	FetchMessage(context.Context) (kafka.Message, error)
+	CommitMessages(context.Context, ...kafka.Message) error
+	Close() error
+}
+
 type KafkaPublisher struct {
 	writers map[string]*kafka.Writer
 }
@@ -64,6 +70,33 @@ func (p *KafkaPublisher) Close() error {
 		}
 	}
 	return firstErr
+}
+
+func NewKafkaReaders(brokers []string, groupID string) ([]Reader, error) {
+	clean := make([]string, 0, len(brokers))
+	for _, broker := range brokers {
+		if value := strings.TrimSpace(broker); value != "" {
+			clean = append(clean, value)
+		}
+	}
+	if len(clean) == 0 {
+		return nil, fmt.Errorf("at least one Redpanda broker is required")
+	}
+	if strings.TrimSpace(groupID) == "" {
+		return nil, fmt.Errorf("Redpanda group ID is required")
+	}
+	readers := make([]Reader, 0, 2)
+	for _, topic := range []string{events.TopicTripUpdates, events.TopicVehiclePositions} {
+		readers = append(readers, kafka.NewReader(kafka.ReaderConfig{
+			Brokers:     clean,
+			GroupID:     groupID,
+			Topic:       topic,
+			MinBytes:    1,
+			MaxBytes:    1 << 20,
+			StartOffset: kafka.FirstOffset,
+		}))
+	}
+	return readers, nil
 }
 
 func newWriter(brokers []string, topic string) *kafka.Writer {
