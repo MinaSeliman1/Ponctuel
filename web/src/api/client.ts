@@ -1,4 +1,4 @@
-import type { Dashboard, Vehicle } from '../types'
+import type { Dashboard, ErrorSummary, Vehicle } from '../types'
 
 const endpoint = import.meta.env.VITE_API_URL || '/query'
 
@@ -42,4 +42,14 @@ export async function fetchVehicles(limit = 500, signal?: AbortSignal): Promise<
     signal,
   )
   return payload.vehicles
+}
+
+export async function fetchErrorSummary(limit = 100, signal?: AbortSignal): Promise<ErrorSummary[]> {
+  const boundedLimit = Math.max(1, Math.min(100, Math.trunc(limit)))
+  const payload = await query<{ errorSummary: ErrorSummary[] }>(
+    `query ErrorSummary($limit: Int) { errorSummary(limit: $limit) { routeId horizonSeconds sampleCount meanErrorSeconds onTimeRate } }`,
+    { limit: boundedLimit },
+    signal,
+  )
+  return payload.errorSummary
 }
