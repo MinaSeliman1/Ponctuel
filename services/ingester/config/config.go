@@ -101,11 +101,8 @@ func (c Config) Validate() error {
 	if c.FreshnessWindow <= 0 {
 		return fmt.Errorf("FRESHNESS_WINDOW must be positive")
 	}
-	if c.GeofenceRadiusMeters <= 0 || c.GeofenceRadiusMeters > 1000 {
+	if c.GeofenceRadiusMeters != 0 && (c.GeofenceRadiusMeters < 0 || c.GeofenceRadiusMeters > 1000) {
 		return fmt.Errorf("GEOFENCE_RADIUS_METERS must be between 0 and 1000")
-	}
-	if strings.TrimSpace(c.RedpandaGroupID) == "" {
-		return fmt.Errorf("REDPANDA_GROUP_ID is required")
 	}
 	if strings.TrimSpace(c.FixtureDir) == "" {
 		return fmt.Errorf("FIXTURE_DIR is required")

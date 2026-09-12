@@ -94,6 +94,10 @@ func (r *apiFakeRepository) LatestSnapshotAt(context.Context) (time.Time, error)
 func (r *apiFakeRepository) LatestVehicles(context.Context) ([]domain.Vehicle, error) {
 	return r.vehicles, nil
 }
+func (r *apiFakeRepository) InsertArrival(context.Context, domain.ArrivalObserved) (bool, error) {
+	return false, nil
+}
+func (r *apiFakeRepository) LatestStops(context.Context) ([]domain.Stop, error) { return nil, nil }
 func (r *apiFakeRepository) InsertSnapshot(context.Context, domain.FeedSnapshot) (int64, bool, error) {
 	return 0, false, nil
 }

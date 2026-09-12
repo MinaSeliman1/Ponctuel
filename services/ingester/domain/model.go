@@ -95,6 +95,12 @@ type Vehicle struct {
 	HasDelay     bool
 }
 
+type Stop struct {
+	StopID    string
+	Latitude  float64
+	Longitude float64
+}
+
 type ArrivalObserved struct {
 	TripID       string
 	ServiceDate  string

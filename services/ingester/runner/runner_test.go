@@ -142,7 +142,11 @@ func (r *fakeRepository) CountEvents(context.Context) (int64, error) { return 0,
 func (r *fakeRepository) LatestVehicles(context.Context) ([]domain.Vehicle, error) {
 	return nil, nil
 }
-func (r *fakeRepository) Ping(context.Context) error { return nil }
+func (r *fakeRepository) InsertArrival(context.Context, domain.ArrivalObserved) (bool, error) {
+	return false, nil
+}
+func (r *fakeRepository) LatestStops(context.Context) ([]domain.Stop, error) { return nil, nil }
+func (r *fakeRepository) Ping(context.Context) error                         { return nil }
 
 func testSnapshots() map[domain.FeedType]domain.FeedSnapshot {
 	now := time.Now().UTC()
