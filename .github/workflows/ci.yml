@@ -46,7 +46,11 @@ jobs:
       - name: Run database-backed tests
         env:
           TEST_DATABASE_URL: postgres://ponctuel:ponctuel@127.0.0.1:5432/ponctuel?sslmode=disable
-        run: go test ./services/ingester/store ./services/ingester/gtfs
+        run: go test ./services/ingester/store
+      - name: Run GTFS database-backed tests
+        env:
+          TEST_DATABASE_URL: postgres://ponctuel:ponctuel@127.0.0.1:5432/ponctuel?sslmode=disable
+        run: go test ./services/ingester/gtfs
 
   frontend:
     name: Frontend tests and build

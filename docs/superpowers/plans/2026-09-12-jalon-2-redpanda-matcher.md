@@ -234,7 +234,7 @@ git commit -m "feat: integrate redpanda and matcher in compose"
 **Files:**
 - Modify: `docs/superpowers/plans/2026-09-12-jalon-2-redpanda-matcher.md`
 
-- [ ] **Step 1: Run the complete verification matrix**
+- [x] **Step 1: Run the complete verification matrix**
 
 Run:
 
@@ -247,14 +247,19 @@ git diff --check
 
 Expected: all checks pass, no secret appears in logs or assets, and only the named smoke project is removed.
 
-- [ ] **Step 2: Mark the plan complete and inspect the diff**
+- [x] **Step 2: Mark the plan complete and inspect the diff**
 
 Cocher les étapes réellement vérifiées, relire le diff, confirmer que `main` et `jalon-1` ne contiennent aucune modification locale, puis vérifier `git status --short --branch`.
 
-- [ ] **Step 3: Push the branch**
+- [x] **Step 3: Push the branch**
 
 ```powershell
 git push -u origin jalon-2
 ```
 
 Créer une pull request vers la branche par défaut uniquement après que les tests et le smoke soient verts; ne pas fusionner automatiquement.
+
+Vérifications exécutées : `scripts/check.ps1`, `scripts/smoke.ps1`, `go vet ./...`,
+tests PostgreSQL et GTFS séquentiels sur TimescaleDB, `docker compose config` et
+`git diff --check`. La branche est poussée après le commit final; aucune fusion
+automatique vers `main` n’est effectuée.

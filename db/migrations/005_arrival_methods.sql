@@ -26,13 +26,33 @@ ALTER TABLE arrival_observed
     ALTER COLUMN reason SET DEFAULT '',
     ALTER COLUMN reason SET NOT NULL;
 
-ALTER TABLE arrival_observed
-    ADD CONSTRAINT arrival_observed_method_check
-    CHECK (method IN ('last_update', 'geofence'));
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'arrival_observed_method_check'
+          AND conrelid = 'arrival_observed'::regclass
+    ) THEN
+        ALTER TABLE arrival_observed
+            ADD CONSTRAINT arrival_observed_method_check
+            CHECK (method IN ('last_update', 'geofence'));
+    END IF;
+END
+$$;
 
-ALTER TABLE arrival_observed
-    ADD CONSTRAINT arrival_observed_confidence_check
-    CHECK (confidence >= 0 AND confidence <= 1);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'arrival_observed_confidence_check'
+          AND conrelid = 'arrival_observed'::regclass
+    ) THEN
+        ALTER TABLE arrival_observed
+            ADD CONSTRAINT arrival_observed_confidence_check
+            CHECK (confidence >= 0 AND confidence <= 1);
+    END IF;
+END
+$$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS arrival_observed_logical_method_idx
     ON arrival_observed (trip_id, service_date, stop_id, method);

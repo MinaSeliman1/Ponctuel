@@ -7,6 +7,7 @@ $required = @(
     'README.md',
     'Dockerfile.api',
     'Dockerfile.ingester',
+    'Dockerfile.matcher',
     'Dockerfile.web',
     'deploy/compose/docker-compose.yml',
     'scripts/smoke.ps1'
