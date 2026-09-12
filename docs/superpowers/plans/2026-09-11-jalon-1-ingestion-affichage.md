@@ -90,13 +90,13 @@ README.md
 
 - [ ] **Step 1: Write the failing repository smoke check**
 
-Create `scripts/check.ps1` with strict mode and checks for the required files, then invoke commands that are expected to fail because the files and module do not exist yet:
+Create `scripts/check.ps1` with strict mode and checks for the foundation files, then invoke commands that are expected to fail because the module has no packages yet:
 
 ```powershell
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$required = @('go.mod', '.env.example', 'README.md', 'deploy/compose/docker-compose.yml')
+$required = @('go.mod', '.env.example', 'README.md')
 foreach ($path in $required) {
     if (-not (Test-Path -LiteralPath $path)) {
         throw "Fichier requis absent: $path"
