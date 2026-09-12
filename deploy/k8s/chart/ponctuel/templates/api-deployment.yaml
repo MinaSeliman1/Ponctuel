@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ponctuel.fullname" . }}-api
+  labels:
+    {{- include "ponctuel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  replicas: {{ .Values.replicas.api }}
+  selector:
+    matchLabels:
+      {{- include "ponctuel.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        {{- include "ponctuel.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+    spec:
+      serviceAccountName: {{ include "ponctuel.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: "{{ .Values.images.api.repository }}:{{ .Values.images.api.tag }}"
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+          envFrom:
+            - configMapRef:
+                name: {{ include "ponctuel.configMapName" . }}
+            - secretRef:
+                name: {{ include "ponctuel.secretName" . }}
+          env:
+            - name: API_HTTP_ADDR
+              value: ":8080"
+          ports:
+            - name: http
+              containerPort: 8080
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ponctuel.fullname" . }}-ingester
+  labels:
+    {{- include "ponctuel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingester
+spec:
+  replicas: {{ .Values.replicas.ingester }}
+  selector:
+    matchLabels:
+      {{- include "ponctuel.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: ingester
+  template:
+    metadata:
+      labels:
+        {{- include "ponctuel.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: ingester
+    spec:
+      serviceAccountName: {{ include "ponctuel.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: ingester
+          image: "{{ .Values.images.ingester.repository }}:{{ .Values.images.ingester.tag }}"
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+          envFrom:
+            - configMapRef:
+                name: {{ include "ponctuel.configMapName" . }}
+            - secretRef:
+                name: {{ include "ponctuel.secretName" . }}
+          env:
+            - name: INGESTER_HTTP_ADDR
+              value: ":8081"
+            - name: FIXTURE_DIR
+              value: /app/testdata/realtime
+            - name: RAW_DATA_DIR
+              value: /app/data/raw
+          ports:
+            - name: http
+              containerPort: 8081
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+          volumeMounts:
+            - name: raw-data
+              mountPath: /app/data/raw
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: raw-data
+          emptyDir: {}
