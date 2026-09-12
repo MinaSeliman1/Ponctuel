@@ -324,22 +324,22 @@ git commit -m "feat: run fixture and STM ingestion loop"
 - `gtfs.Import(ctx context.Context, db *pgxpool.Pool, archive io.Reader, feedVersion string) error`
 - `gtfs.ValidateRequiredFiles(zipReader *zip.Reader) error`
 
-- [ ] **Step 1: Write failing importer tests**
+- [x] **Step 1: Write failing importer tests**
 
 Test that an archive containing the five required files loads rows, malformed CSV returns a useful error with file name and row number, and a second import of the same `feed_version` is rejected or replaced according to the documented policy. Use an in-memory ZIP fixture built by the test; no network.
 
 Run: `docker run --rm --network host -v "${PWD}:/src" -w /src -e DATABASE_URL=postgres://ponctuel:ponctuel@host.docker.internal:5432/ponctuel?sslmode=disable golang:1.27.1 go test ./services/ingester/gtfs -v`  
 Expected: FAIL because the importer does not exist.
 
-- [ ] **Step 2: Implement deterministic static GTFS import**
+- [x] **Step 2: Implement deterministic static GTFS import**
 
 Parse CSV with `encoding/csv`, validate headers, stage rows in temporary tables and insert into the versioned static tables in a transaction. Preserve GTFS identifiers as strings. Convert `arrival_time` values beyond 24:00:00 using the GTFS service-day convention instead of rejecting them.
 
-- [ ] **Step 3: Add the download script and attribution document**
+- [x] **Step 3: Add the download script and attribution document**
 
 `download-gtfs.ps1` accepts a URL, destination and expected SHA-256, writes to `data/` only, and fails on checksum mismatch. `docs/data-sources.md` records the STM URL, date of retrieval, attribution, license and the fact that the endpoint can change.
 
-- [ ] **Step 4: Run the importer test and commit**
+- [x] **Step 4: Run the importer test and commit**
 
 Run the importer test, then:
 
