@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "ponctuel.fullname" . }}-redpanda-topics
+  labels:
+    {{- include "ponctuel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redpanda-topics
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 6
+  template:
+    metadata:
+      labels:
+        {{- include "ponctuel.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: redpanda-topics
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ include "ponctuel.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      containers:
+        - name: create-topics
+          image: {{ .Values.redpanda.image | quote }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - >-
+              until rpk topic list --brokers {{ include "ponctuel.fullname" . }}-redpanda:{{ .Values.redpanda.servicePort }} >/dev/null 2>&1; do sleep 2; done;
+              rpk topic create {{ .Values.config.topics.tripUpdates }} --brokers {{ include "ponctuel.fullname" . }}-redpanda:{{ .Values.redpanda.servicePort }} --partitions 1 --replicas 1 || true;
+              rpk topic create {{ .Values.config.topics.vehiclePositions }} --brokers {{ include "ponctuel.fullname" . }}-redpanda:{{ .Values.redpanda.servicePort }} --partitions 1 --replicas 1 || true
