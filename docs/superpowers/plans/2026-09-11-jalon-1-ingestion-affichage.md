@@ -88,7 +88,7 @@ README.md
 - Produces the module path `ponctuel`, the environment contract and the commands used by every later task.
 - Consumes no application code.
 
-- [ ] **Step 1: Write the failing repository smoke check**
+- [x] **Step 1: Write the failing repository smoke check**
 
 Create `scripts/check.ps1` with strict mode and checks for the foundation files, then invoke commands that are expected to fail because the module has no packages yet:
 
@@ -109,7 +109,7 @@ docker run --rm -v "${PWD}:/src" -w /src golang:1.27.1 go test ./...
 Run: `pwsh -NoProfile -File scripts/check.ps1`  
 Expected: FAIL because the required files and Go module are absent.
 
-- [ ] **Step 2: Add the minimal repository contract**
+- [x] **Step 2: Add the minimal repository contract**
 
 Create `go.mod` with `module ponctuel` and `go 1.27.1`. Create `.gitignore` that excludes `.env`, `data/`, `dist/`, `node_modules/`, coverage output, Docker volumes and generated local payloads. Create `.env.example` with non-secret values:
 
@@ -128,12 +128,12 @@ RAW_DATA_DIR=./data/raw
 
 Create a French README with project purpose, fixture-first quickstart, secret policy, current scope (jalon 1), source attribution and an explicit statement that no live public deployment is claimed yet.
 
-- [ ] **Step 3: Run the repository smoke check to make it pass**
+- [x] **Step 3: Run the repository smoke check to make it pass**
 
 Run: `pwsh -NoProfile -File scripts/check.ps1`  
 Expected: PASS for file checks; `go test ./...` passes with no packages.
 
-- [ ] **Step 4: Commit the repository foundation**
+- [x] **Step 4: Commit the repository foundation**
 
 ```powershell
 git add go.mod .gitignore .env.example README.md scripts/check.ps1
@@ -160,7 +160,7 @@ git commit -m "chore: initialize Ponctuel repository"
 - `domain.Vehicle` contains `VehicleID`, `RouteID`, `TripID`, `Latitude`, `Longitude`, `RecordedAt` and optional `DelaySeconds`.
 - `domain.Event` contains `SnapshotHash`, `FeedType`, `EntityID`, `RecordedAt`, `VehicleID`, `TripID`, `RouteID`, `StopID`, `StopSequence`, `Latitude`, `Longitude`, `PredictedAt`, `DelaySeconds`.
 
-- [ ] **Step 1: Write failing domain tests**
+- [x] **Step 1: Write failing domain tests**
 
 Add table-driven tests that assert: a vehicle position preserves latitude/longitude and timestamps; a trip update preserves negative delay; an entity without the relevant message is ignored; an absent position does not create a map point; and identical payload bytes produce the same SHA-256 hash.
 
@@ -180,19 +180,19 @@ func TestNormalizeTripUpdatePreservesNegativeDelay(t *testing.T) {
 Run: `docker run --rm -v "${PWD}:/src" -w /src golang:1.27.1 go test ./services/ingester/domain ./services/ingester/fetch -run TestNormalize -v`  
 Expected: FAIL because the domain types and decoder do not exist.
 
-- [ ] **Step 2: Implement the pure domain types and normalizer**
+- [x] **Step 2: Implement the pure domain types and normalizer**
 
 Define typed enums for `FeedType` and `EventKind`, use `time.Time` for all internal timestamps, and make `Normalize` reject invalid coordinates, missing IDs and timestamps in a deterministic way. Keep the normalizer independent from HTTP and PostgreSQL.
 
 Add the MobilityData dependency and decode protobuf using `google.golang.org/protobuf/proto` and `github.com/MobilityData/gtfs-realtime-bindings/golang/gtfs`. Do not log raw payloads or headers.
 
-- [ ] **Step 3: Implement HTTP fetching with fixture mode**
+- [x] **Step 3: Implement HTTP fetching with fixture mode**
 
 Implement a client with an injected `http.Client`, base request headers from `STM_API_KEY_HEADER`, timeout, response-size limit, status classification and SHA-256 hashing. In fixture mode, read the committed `.pb` file through the same `Decode` path used by HTTP.
 
 The fetcher must return typed errors for unauthorized, rate-limited, upstream and malformed responses. It must never include the key value in an error string.
 
-- [ ] **Step 4: Generate deterministic protobuf fixtures and rerun tests**
+- [x] **Step 4: Generate deterministic protobuf fixtures and rerun tests**
 
 Implement `cmd/fixturegen` to marshal one vehicle-position feed and one trip-update feed with fixed timestamps and IDs, then run:
 
@@ -203,7 +203,7 @@ docker run --rm -v "${PWD}:/src" -w /src golang:1.27.1 go test ./services/ingest
 
 Expected: PASS, with fixture files reproducible byte-for-byte after regeneration.
 
-- [ ] **Step 5: Commit the domain and parser**
+- [x] **Step 5: Commit the domain and parser**
 
 ```powershell
 git add services/ingester/domain services/ingester/fetch cmd/fixturegen testdata/realtime go.mod go.sum
