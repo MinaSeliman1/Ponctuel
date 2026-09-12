@@ -1,0 +1,23 @@
+scalar Time
+
+type Dashboard {
+  eventCount: Int!
+  lastCollectedAt: Time
+  mode: String!
+  stale: Boolean!
+}
+
+type Vehicle {
+  vehicleId: String!
+  routeId: String
+  tripId: String
+  latitude: Float!
+  longitude: Float!
+  recordedAt: Time!
+  delaySeconds: Int
+}
+
+type Query {
+  dashboard: Dashboard!
+  vehicles(limit: Int = 500): [Vehicle!]!
+}

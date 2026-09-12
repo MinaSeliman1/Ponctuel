@@ -1,0 +1,17 @@
+schema:
+  - services/api/graph/schema.graphqls
+
+exec:
+  layout: single-file
+  filename: services/api/graph/generated.go
+  package: graph
+
+model:
+  filename: services/api/graph/model/models_gen.go
+  package: model
+
+resolver:
+  layout: follow-schema
+  dir: services/api/graph
+  package: graph
+  preserve_resolver: true

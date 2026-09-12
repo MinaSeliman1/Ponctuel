@@ -173,6 +173,20 @@ func (r *PostgresRepository) CountEvents(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
+func (r *PostgresRepository) LatestSnapshotAt(ctx context.Context) (time.Time, error) {
+	if r == nil || r.pool == nil {
+		return time.Time{}, fmt.Errorf("PostgreSQL repository is not initialized")
+	}
+	var latest *time.Time
+	if err := r.pool.QueryRow(ctx, `SELECT max(recorded_at) FROM feed_snapshot`).Scan(&latest); err != nil {
+		return time.Time{}, fmt.Errorf("load latest snapshot: %w", err)
+	}
+	if latest == nil {
+		return time.Time{}, nil
+	}
+	return latest.UTC(), nil
+}
+
 func (r *PostgresRepository) LatestVehicles(ctx context.Context) ([]domain.Vehicle, error) {
 	if r == nil || r.pool == nil {
 		return nil, fmt.Errorf("PostgreSQL repository is not initialized")
