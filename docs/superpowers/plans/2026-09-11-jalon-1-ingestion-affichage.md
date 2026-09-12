@@ -226,29 +226,29 @@ git commit -m "feat: decode and normalize GTFS realtime feeds"
 - `store.Repository.CountEvents(ctx context.Context) (int64, error)` returns the public counter.
 - `store.Repository.LatestVehicles(ctx context.Context) ([]domain.Vehicle, error)` returns positions newer than the configured freshness window.
 
-- [ ] **Step 1: Write failing migration and repository tests**
+- [x] **Step 1: Write failing migration and repository tests**
 
 Add a repository contract test that inserts the same snapshot twice and asserts one new snapshot, inserts a negative delay and asserts it is preserved, and verifies the latest-vehicle query excludes stale records. The test must start against `timescale/timescaledb:2.30.0-pg17` from Docker Compose and apply migrations before assertions.
 
 Run: `docker compose -f deploy/compose/docker-compose.yml up -d db` followed by the repository test command.  
 Expected: FAIL because Compose, migrations and repository do not exist.
 
-- [ ] **Step 2: Write migrations with explicit constraints**
+- [x] **Step 2: Write migrations with explicit constraints**
 
 Create the Timescale extension, static GTFS tables, `feed_snapshot`, `vehicle_position`, `prediction`, `arrival_observed` and `prediction_error`. Use `service_date` in trip-instance keys so the same `trip_id` on different days cannot collide. Add indexes on `(route_id, recorded_at)`, `(trip_id, service_date, stop_id)` and fresh-position queries.
 
 Make `vehicle_position` and `prediction` hypertables on their timestamp columns. Add a conservative local retention policy for raw snapshots only; leave derived analytical rows until a later data-policy decision.
 
-- [ ] **Step 3: Implement the pgx repository**
+- [x] **Step 3: Implement the pgx repository**
 
 Use `pgxpool.Pool`, parameterized SQL and explicit transactions. `InsertSnapshot` must use `ON CONFLICT (feed_type, payload_hash) DO NOTHING RETURNING snapshot_id`; when no row is returned, report `inserted=false` so the runner skips event insertion. `InsertEvents` uses the returned ID for a new snapshot. Map database failures to errors that retain operation context without query parameters.
 
-- [ ] **Step 4: Run the repository test to verify it passes**
+- [x] **Step 4: Run the repository test to verify it passes**
 
 Run: `docker compose -f deploy/compose/docker-compose.yml up -d db` and then `docker run --rm --network host -v "${PWD}:/src" -w /src -e DATABASE_URL=postgres://ponctuel:ponctuel@host.docker.internal:5432/ponctuel?sslmode=disable golang:1.27.1 go test ./services/ingester/store -v`  
 Expected: PASS, including idempotency, negative delay and freshness behavior.
 
-- [ ] **Step 5: Commit persistence**
+- [x] **Step 5: Commit persistence**
 
 ```powershell
 git add db/migrations services/ingester/store
