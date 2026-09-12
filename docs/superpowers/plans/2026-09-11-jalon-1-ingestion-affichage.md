@@ -366,22 +366,22 @@ git commit -m "feat: import versioned static GTFS schedule"
 - `GET /healthz`, `GET /readyz`, `GET /metrics` have the same semantics as the ingester.
 - `POST /query` is the GraphQL endpoint; introspection is allowed locally and can be disabled for a public deployment.
 
-- [ ] **Step 1: Write failing HTTP and schema tests**
+- [x] **Step 1: Write failing HTTP and schema tests**
 
 Use a fake repository to assert the dashboard response, the vehicle limit, stale-data flag and readiness failure when `Ping` fails. Assert that API keys are not accepted as query parameters or logged.
 
 Run: `docker run --rm -v "${PWD}:/src" -w /src golang:1.27.1 go test ./services/api -v`  
 Expected: FAIL because the schema and handlers do not exist.
 
-- [ ] **Step 2: Add gqlgen schema and typed resolvers**
+- [x] **Step 2: Add gqlgen schema and typed resolvers**
 
 Define the schema with explicit nullable/non-nullable fields, generate code with a pinned gqlgen version, and implement resolvers over the repository interface. The API remains read-only; it never fetches STM directly.
 
-- [ ] **Step 3: Add health, metrics and bounded GraphQL execution**
+- [x] **Step 3: Add health, metrics and bounded GraphQL execution**
 
 Configure request body size, HTTP timeouts, CORS from an allowlist and a query-depth limit. Return structured errors without SQL details. Add Prometheus counters for HTTP requests and GraphQL errors.
 
-- [ ] **Step 4: Run API tests and commit**
+- [x] **Step 4: Run API tests and commit**
 
 Run: `docker run --rm -v "${PWD}:/src" -w /src golang:1.27.1 go test ./services/api ./cmd/api -v`  
 Expected: PASS.
