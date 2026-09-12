@@ -40,9 +40,9 @@ GTFS-Realtime fixture ou STM
                                                        │
                                                        ▼
                                               API GraphQL Go
-                                  │
-                                  ▼
-                         Vue 3 + dashboard SVG
+                                                       │
+                                                       ▼
+                                              Vue 3 + dashboard SVG
 ```
 
 - `services/ingester` décode, normalise et déduplique les snapshots protobuf.
@@ -71,7 +71,9 @@ docker compose -f deploy/compose/docker-compose.yml config
 
 Pour les détails Compose, voir [deploy/compose/README.md](deploy/compose/README.md).
 Les règles de contribution et de sécurité sont dans
-[CONTRIBUTING.md](CONTRIBUTING.md) et [SECURITY.md](SECURITY.md).
+[CONTRIBUTING.md](CONTRIBUTING.md) et [SECURITY.md](SECURITY.md). Le chart
+Kubernetes local et sa procédure de validation sont dans
+[deploy/k8s/README.md](deploy/k8s/README.md).
 
 ## Mode STM réel
 
@@ -99,8 +101,9 @@ l’attribution et les conditions d’utilisation officielles STM.
 
 ## Statut du projet
 
-Les jalons 1 et 2 sont prêts pour une démonstration locale et un portfolio
-public. La démonstration complète reste locale et gratuite. Le projet ne
+Les jalons 1 à 3 sont prêts pour une démonstration locale, un déploiement k3s
+documenté et un portfolio public. La démonstration complète reste locale et
+gratuite. Le projet ne
 prétend pas être un service de production : authentification, haute
 disponibilité, rotation automatisée des secrets, rétention opérationnelle et
 SLA restent hors périmètre.

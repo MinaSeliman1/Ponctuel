@@ -19,12 +19,17 @@ npm --prefix web ci
 npm --prefix web run test -- --run
 npm --prefix web run typecheck
 npm --prefix web run build
+helm lint deploy/k8s/chart/ponctuel
+helm template ponctuel deploy/k8s/chart/ponctuel
 ```
 
 Les changements qui touchent l’ingestion, l’API ou Compose doivent inclure
 une vérification fixture. Les changements web doivent conserver les états
 chargement, erreur, vide et données vieillissantes, ainsi que les labels
 accessibles.
+
+Les changements Kubernetes doivent fournir le rendu Helm et ne doivent jamais
+placer `STM_API_KEY` dans un ConfigMap, une image ou un fichier versionné.
 
 ## Pull requests
 

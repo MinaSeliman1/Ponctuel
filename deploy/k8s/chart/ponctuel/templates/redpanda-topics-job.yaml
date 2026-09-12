@@ -26,5 +26,6 @@ spec:
           args:
             - >-
               until rpk topic list --brokers {{ include "ponctuel.fullname" . }}-redpanda:{{ .Values.redpanda.servicePort }} >/dev/null 2>&1; do sleep 2; done;
-              rpk topic create {{ .Values.config.topics.tripUpdates }} --brokers {{ include "ponctuel.fullname" . }}-redpanda:{{ .Values.redpanda.servicePort }} --partitions 1 --replicas 1 || true;
-              rpk topic create {{ .Values.config.topics.vehiclePositions }} --brokers {{ include "ponctuel.fullname" . }}-redpanda:{{ .Values.redpanda.servicePort }} --partitions 1 --replicas 1 || true
+              create_topic() { topic="$1"; if ! rpk topic describe "$topic" --brokers {{ include "ponctuel.fullname" . }}-redpanda:{{ .Values.redpanda.servicePort }} >/dev/null 2>&1; then rpk topic create "$topic" --brokers {{ include "ponctuel.fullname" . }}-redpanda:{{ .Values.redpanda.servicePort }} --partitions 1 --replicas 1; fi; };
+              create_topic {{ .Values.config.topics.tripUpdates }};
+              create_topic {{ .Values.config.topics.vehiclePositions }}
