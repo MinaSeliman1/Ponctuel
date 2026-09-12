@@ -68,13 +68,27 @@ func TestPostgresRepositoryContract(t *testing.T) {
 		PredictedAt:  now,
 		DelaySeconds: -90,
 		HasDelay:     true,
+	}, {
+		Kind:         domain.EventKindPrediction,
+		SnapshotHash: snapshot.PayloadHash,
+		FeedType:     snapshot.FeedType,
+		EntityID:     "trip-entity-2",
+		RecordedAt:   now.Add(-5 * time.Minute),
+		VehicleID:    "bus-1",
+		TripID:       "trip-1",
+		RouteID:      "51",
+		StopID:       "stop-1",
+		StopSequence: 7,
+		PredictedAt:  now.Add(2 * time.Minute),
+		DelaySeconds: -30,
+		HasDelay:     true,
 	}}
 	insertedEvents, err := repository.InsertEvents(ctx, snapshotID, events)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if insertedEvents != 1 {
-		t.Fatalf("inserted events = %d, want 1", insertedEvents)
+	if insertedEvents != 2 {
+		t.Fatalf("inserted events = %d, want 2", insertedEvents)
 	}
 	arrival := domain.ArrivalObserved{
 		TripID:       "trip-1",
@@ -98,16 +112,16 @@ func TestPostgresRepositoryContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(summaries) != 1 || summaries[0].SampleCount != 1 || summaries[0].HorizonSeconds != 0 || summaries[0].MeanErrorSeconds != 60 || summaries[0].OnTimeRate != 1 {
-		t.Fatalf("error summaries = %#v, want one one-minute on-time sample", summaries)
+	if len(summaries) != 2 || summaries[0].SampleCount != 1 || summaries[0].HorizonSeconds != 0 || summaries[0].MeanErrorSeconds != 60 || summaries[0].OnTimeRate != 1 || summaries[1].SampleCount != 1 || summaries[1].HorizonSeconds != 420 || summaries[1].MeanErrorSeconds != -60 || summaries[1].OnTimeRate != 1 {
+		t.Fatalf("error summaries = %#v, want two one-sample on-time horizons", summaries)
 	}
 
 	count, err := repository.CountEvents(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if count != 1 {
-		t.Fatalf("event count = %d, want 1", count)
+	if count != 2 {
+		t.Fatalf("event count = %d, want 2", count)
 	}
 
 	freshSnapshot := domain.FeedSnapshot{
