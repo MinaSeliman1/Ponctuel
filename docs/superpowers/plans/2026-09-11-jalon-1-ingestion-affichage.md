@@ -414,26 +414,28 @@ git commit -m "feat: expose the live dashboard GraphQL API"
 - `fetchDashboard(signal?: AbortSignal): Promise<Dashboard>` and `fetchVehicles(limit: number, signal?: AbortSignal): Promise<Vehicle[]>` are the only data access functions used by components.
 - Components render loading, empty, stale, error and success states without hardcoded live data.
 
-- [ ] **Step 1: Write failing component tests**
+- [x] **Step 1: Write failing component tests**
 
 Add Vitest tests for: loading text, error message without technical secrets, empty-state copy, stale-data warning, and a vehicle row showing line/trip and delay status.
 
 Run: `pnpm --dir web test -- --run`  
 Expected: FAIL because the Vue app and package scripts do not exist.
 
-- [ ] **Step 2: Scaffold Vue 3/Vite/TypeScript and API client**
+- [x] **Step 2: Scaffold Vue 3/Vite/TypeScript and API client**
 
 Use a pinned package lock, scripts `dev`, `build`, `typecheck`, `test` and `test:e2e`. Keep the API base URL in `VITE_API_URL`, defaulting to `/query` for same-origin deployment. Do not expose `STM_API_KEY` to Vite.
 
-- [ ] **Step 3: Implement accessible dashboard components**
+- [x] **Step 3: Implement accessible dashboard components**
 
 Use semantic headings, keyboard-accessible filters, visible focus states and French labels. Render the last collection, event count and mode. Show a clear “données vieillissantes” state when freshness exceeds the configured threshold.
 
-- [ ] **Step 4: Add Leaflet map with legal attribution**
+- [x] **Step 4: Add deterministic SVG map without paid tile dependency**
+
+The frontend uses an inline, accessible Montréal schematic with valid-coordinate markers and no external tile dependency. This keeps the public demo deterministic and free to run while leaving the API coordinates ready for a production map provider.
 
 Render vehicle markers only for valid coordinates, use a configurable tile URL, include the tile provider attribution, and show an explicit map fallback when tiles fail. Do not use a STM logo or branded visual asset.
 
-- [ ] **Step 5: Run web tests and build**
+- [x] **Step 5: Run web tests and build**
 
 Run:
 
@@ -446,7 +448,7 @@ pnpm --dir web run build
 
 Expected: PASS, with a production bundle in `web/dist` and no API key in the generated assets.
 
-- [ ] **Step 6: Commit the frontend**
+- [x] **Step 6: Commit the frontend**
 
 ```powershell
 git add web
