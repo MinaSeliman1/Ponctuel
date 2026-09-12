@@ -146,7 +146,10 @@ func (r *fakeRepository) InsertArrival(context.Context, domain.ArrivalObserved) 
 	return false, nil
 }
 func (r *fakeRepository) LatestStops(context.Context) ([]domain.Stop, error) { return nil, nil }
-func (r *fakeRepository) Ping(context.Context) error                         { return nil }
+func (r *fakeRepository) ErrorSummary(context.Context, int) ([]domain.ErrorSummary, error) {
+	return nil, nil
+}
+func (r *fakeRepository) Ping(context.Context) error { return nil }
 
 func testSnapshots() map[domain.FeedType]domain.FeedSnapshot {
 	now := time.Now().UTC()

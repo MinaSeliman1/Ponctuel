@@ -22,6 +22,7 @@ type Repository interface {
 	LatestVehicles(ctx context.Context) ([]domain.Vehicle, error)
 	InsertArrival(ctx context.Context, arrival domain.ArrivalObserved) (bool, error)
 	LatestStops(ctx context.Context) ([]domain.Stop, error)
+	ErrorSummary(ctx context.Context, limit int) ([]domain.ErrorSummary, error)
 	Ping(ctx context.Context) error
 }
 
@@ -244,16 +245,47 @@ func (r *PostgresRepository) InsertArrival(ctx context.Context, arrival domain.A
 	if _, err := time.Parse("2006-01-02", arrival.ServiceDate); err != nil {
 		return false, fmt.Errorf("insert arrival: invalid service_date: %w", err)
 	}
-	result, err := r.pool.Exec(ctx, `
+	transaction, err := r.pool.Begin(ctx)
+	if err != nil {
+		return false, fmt.Errorf("begin arrival transaction: %w", err)
+	}
+	defer transaction.Rollback(ctx)
+	var arrivalID int64
+	err = transaction.QueryRow(ctx, `
 		INSERT INTO arrival_observed
 			(trip_id, service_date, stop_id, stop_sequence, observed_at, source, method, confidence, reason)
 		VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8)
 		ON CONFLICT (trip_id, service_date, stop_id, method) DO NOTHING
-	`, arrival.TripID, arrival.ServiceDate, arrival.StopID, optionalSequence(arrival.StopSequence), arrival.ObservedAt.UTC(), string(arrival.Method), arrival.Confidence, arrival.Reason)
+		RETURNING arrival_id
+	`, arrival.TripID, arrival.ServiceDate, arrival.StopID, optionalSequence(arrival.StopSequence), arrival.ObservedAt.UTC(), string(arrival.Method), arrival.Confidence, arrival.Reason).Scan(&arrivalID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
 	if err != nil {
 		return false, fmt.Errorf("insert arrival: %w", err)
 	}
-	return result.RowsAffected() == 1, nil
+	_, err = transaction.Exec(ctx, `
+		INSERT INTO prediction_error
+			(prediction_id, prediction_recorded_at, arrival_id, error_seconds, within_on_time_window)
+		SELECT
+			prediction.prediction_id,
+			prediction.recorded_at,
+			$1,
+			EXTRACT(EPOCH FROM ($2::timestamptz - prediction.predicted_at))::integer,
+			EXTRACT(EPOCH FROM ($2::timestamptz - prediction.predicted_at)) BETWEEN -60 AND 300
+		FROM prediction
+		WHERE prediction.trip_id = $3
+		  AND prediction.service_date = $4::date
+		  AND prediction.stop_id = $5
+		ON CONFLICT DO NOTHING
+	`, arrivalID, arrival.ObservedAt.UTC(), arrival.TripID, arrival.ServiceDate, arrival.StopID)
+	if err != nil {
+		return false, fmt.Errorf("insert prediction errors: %w", err)
+	}
+	if err := transaction.Commit(ctx); err != nil {
+		return false, fmt.Errorf("commit arrival transaction: %w", err)
+	}
+	return true, nil
 }
 
 func (r *PostgresRepository) LatestStops(ctx context.Context) ([]domain.Stop, error) {
@@ -283,6 +315,49 @@ func (r *PostgresRepository) LatestStops(ctx context.Context) ([]domain.Stop, er
 		return nil, fmt.Errorf("iterate stops: %w", err)
 	}
 	return stops, nil
+}
+
+func (r *PostgresRepository) ErrorSummary(ctx context.Context, limit int) ([]domain.ErrorSummary, error) {
+	if r == nil || r.pool == nil {
+		return nil, fmt.Errorf("PostgreSQL repository is not initialized")
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+	rows, err := r.pool.Query(ctx, `
+		SELECT
+			COALESCE(prediction.route_id, ''),
+			GREATEST(0, LEAST(3600, EXTRACT(EPOCH FROM (prediction.predicted_at - prediction.recorded_at))::integer)) AS horizon_seconds,
+			count(*)::bigint,
+			avg(prediction_error.error_seconds)::double precision,
+			avg(CASE WHEN prediction_error.within_on_time_window THEN 1.0 ELSE 0.0 END)::double precision
+		FROM prediction_error
+		JOIN prediction
+		  ON prediction.prediction_id = prediction_error.prediction_id
+		 AND prediction.recorded_at = prediction_error.prediction_recorded_at
+		GROUP BY COALESCE(prediction.route_id, ''), horizon_seconds
+		ORDER BY horizon_seconds, COALESCE(prediction.route_id, '')
+		LIMIT $1
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("query prediction error summary: %w", err)
+	}
+	defer rows.Close()
+	result := make([]domain.ErrorSummary, 0)
+	for rows.Next() {
+		var summary domain.ErrorSummary
+		if err := rows.Scan(&summary.RouteID, &summary.HorizonSeconds, &summary.SampleCount, &summary.MeanErrorSeconds, &summary.OnTimeRate); err != nil {
+			return nil, fmt.Errorf("scan prediction error summary: %w", err)
+		}
+		result = append(result, summary)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate prediction error summary: %w", err)
+	}
+	return result, nil
 }
 
 func optionalDelay(hasDelay bool, delaySeconds int64) any {

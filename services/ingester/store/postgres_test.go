@@ -94,6 +94,13 @@ func TestPostgresRepositoryContract(t *testing.T) {
 	if err != nil || duplicateArrival {
 		t.Fatalf("duplicate arrival inserted = %t, err %v; want false", duplicateArrival, err)
 	}
+	summaries, err := repository.ErrorSummary(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(summaries) != 1 || summaries[0].SampleCount != 1 || summaries[0].HorizonSeconds != 0 || summaries[0].MeanErrorSeconds != 60 || summaries[0].OnTimeRate != 1 {
+		t.Fatalf("error summaries = %#v, want one one-minute on-time sample", summaries)
+	}
 
 	count, err := repository.CountEvents(ctx)
 	if err != nil {
@@ -181,8 +188,8 @@ func applyTestMigrations(t *testing.T, ctx context.Context, pool *pgxpool.Pool) 
 		t.Fatal(err)
 	}
 	sort.Strings(migrationPaths)
-	if len(migrationPaths) != 5 {
-		t.Fatalf("migration count = %d, want 5", len(migrationPaths))
+	if len(migrationPaths) != 6 {
+		t.Fatalf("migration count = %d, want 6", len(migrationPaths))
 	}
 	for _, migrationPath := range migrationPaths {
 		migration, err := os.ReadFile(migrationPath)

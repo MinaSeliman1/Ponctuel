@@ -98,6 +98,9 @@ func (r *apiFakeRepository) InsertArrival(context.Context, domain.ArrivalObserve
 	return false, nil
 }
 func (r *apiFakeRepository) LatestStops(context.Context) ([]domain.Stop, error) { return nil, nil }
+func (r *apiFakeRepository) ErrorSummary(context.Context, int) ([]domain.ErrorSummary, error) {
+	return nil, nil
+}
 func (r *apiFakeRepository) InsertSnapshot(context.Context, domain.FeedSnapshot) (int64, bool, error) {
 	return 0, false, nil
 }

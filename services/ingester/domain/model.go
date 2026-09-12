@@ -111,3 +111,11 @@ type ArrivalObserved struct {
 	Confidence   float64
 	Reason       string
 }
+
+type ErrorSummary struct {
+	RouteID          string
+	HorizonSeconds   int
+	SampleCount      int64
+	MeanErrorSeconds float64
+	OnTimeRate       float64
+}
