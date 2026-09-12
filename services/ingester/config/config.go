@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -19,20 +20,25 @@ const (
 	defaultFreshnessWindow  = 2 * time.Minute
 	defaultFixtureDirectory = "testdata/realtime"
 	defaultRawDataDirectory = "./data/raw"
+	defaultRedpandaGroupID  = "ponctuel-matcher"
+	defaultGeofenceRadius   = 60.0
 )
 
 type Config struct {
-	AppEnv            string
-	HTTPAddr          string
-	DatabaseURL       string
-	PollInterval      time.Duration
-	FreshnessWindow   time.Duration
-	FixtureDir        string
-	RawDataDir        string
-	STMTripUpdatesURL string
-	STMVehicleURL     string
-	STMAPIKey         string
-	STMAPIKeyHeader   string
+	AppEnv               string
+	HTTPAddr             string
+	DatabaseURL          string
+	PollInterval         time.Duration
+	FreshnessWindow      time.Duration
+	FixtureDir           string
+	RawDataDir           string
+	STMTripUpdatesURL    string
+	STMVehicleURL        string
+	STMAPIKey            string
+	STMAPIKeyHeader      string
+	RedpandaBrokers      []string
+	RedpandaGroupID      string
+	GeofenceRadiusMeters float64
 }
 
 func Load() (Config, error) {
@@ -54,6 +60,8 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 		STMVehicleURL:     valueOr(lookup, "STM_VEHICLE_POSITIONS_URL", defaultVehicleURL),
 		STMAPIKey:         valueOr(lookup, "STM_API_KEY", ""),
 		STMAPIKeyHeader:   valueOr(lookup, "STM_API_KEY_HEADER", defaultAPIKeyHeader),
+		RedpandaBrokers:   csvValues(valueOr(lookup, "REDPANDA_BROKERS", "")),
+		RedpandaGroupID:   valueOr(lookup, "REDPANDA_GROUP_ID", defaultRedpandaGroupID),
 	}
 
 	var err error
@@ -61,6 +69,9 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 		return Config{}, err
 	}
 	if cfg.FreshnessWindow, err = durationValue(lookup, "FRESHNESS_WINDOW", defaultFreshnessWindow); err != nil {
+		return Config{}, err
+	}
+	if cfg.GeofenceRadiusMeters, err = floatValue(lookup, "GEOFENCE_RADIUS_METERS", defaultGeofenceRadius); err != nil {
 		return Config{}, err
 	}
 	if err := cfg.Validate(); err != nil {
@@ -89,6 +100,12 @@ func (c Config) Validate() error {
 	}
 	if c.FreshnessWindow <= 0 {
 		return fmt.Errorf("FRESHNESS_WINDOW must be positive")
+	}
+	if c.GeofenceRadiusMeters <= 0 || c.GeofenceRadiusMeters > 1000 {
+		return fmt.Errorf("GEOFENCE_RADIUS_METERS must be between 0 and 1000")
+	}
+	if strings.TrimSpace(c.RedpandaGroupID) == "" {
+		return fmt.Errorf("REDPANDA_GROUP_ID is required")
 	}
 	if strings.TrimSpace(c.FixtureDir) == "" {
 		return fmt.Errorf("FIXTURE_DIR is required")
@@ -122,6 +139,26 @@ func durationValue(lookup func(string) (string, bool), key string, fallback time
 		return 0, fmt.Errorf("%s must be a positive duration", key)
 	}
 	return parsed, nil
+}
+
+func floatValue(lookup func(string) (string, bool), key string, fallback float64) (float64, error) {
+	value := valueOr(lookup, key, strconv.FormatFloat(fallback, 'f', -1, 64))
+	parsed, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be a number", key)
+	}
+	return parsed, nil
+}
+
+func csvValues(raw string) []string {
+	parts := strings.Split(raw, ",")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if value := strings.TrimSpace(part); value != "" {
+			values = append(values, value)
+		}
+	}
+	return values
 }
 
 func validateURL(name, rawURL string) error {
