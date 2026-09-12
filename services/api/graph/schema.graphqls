@@ -17,7 +17,16 @@ type Vehicle {
   delaySeconds: Int
 }
 
+type ErrorSummary {
+  routeId: String
+  horizonSeconds: Int!
+  sampleCount: Int!
+  meanErrorSeconds: Float!
+  onTimeRate: Float!
+}
+
 type Query {
   dashboard: Dashboard!
   vehicles(limit: Int = 500): [Vehicle!]!
+  errorSummary(limit: Int = 100): [ErrorSummary!]!
 }
