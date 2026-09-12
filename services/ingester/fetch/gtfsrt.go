@@ -43,6 +43,11 @@ type FetchError struct {
 	Err        error
 }
 
+// Source fetches one GTFS-Realtime snapshot for the requested feed.
+type Source interface {
+	Fetch(ctx context.Context, feedType domain.FeedType) (domain.FeedSnapshot, error)
+}
+
 func (e *FetchError) Error() string {
 	if e.StatusCode != 0 {
 		return fmt.Sprintf("fetch %s: HTTP %d", e.Kind, e.StatusCode)
