@@ -23,6 +23,23 @@ Les détails d'exécution et les limites seront ajoutés avec le jalon 1. Ne
 committe jamais `.env`, une clé STM ou un payload réel contenant des données
 non nécessaires.
 
+## Import GTFS statique
+
+Télécharge une archive après avoir vérifié son empreinte, puis importe-la dans
+une base déjà migrée :
+
+```powershell
+pwsh -File scripts/download-gtfs.ps1 `
+  -Url https://www.stm.info/sites/default/files/gtfs/gtfs_stm.zip `
+  -Destination data/gtfs/gtfs_stm.zip `
+  -ExpectedSha256 <sha256-fourni-au-moment-du-telechargement>
+go run ./cmd/gtfsimport data/gtfs/gtfs_stm.zip 2026-09-12
+```
+
+Les versions importées sont immuables et une réimportation de la même version
+est refusée. Voir [docs/data-sources.md](docs/data-sources.md) pour la source,
+l'attribution et les conditions d'utilisation.
+
 ## Données STM
 
 Les données STM sont utilisées selon les conditions officielles et devront être
