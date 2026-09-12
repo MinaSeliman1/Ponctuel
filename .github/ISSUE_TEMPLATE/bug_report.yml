@@ -1,0 +1,30 @@
+name: Signaler un bug
+description: Décrire un comportement reproductible de Ponctuel.
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Résumé
+      description: Que s’est-il passé ?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Quelles étapes permettent de reproduire le problème ?
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environnement
+      placeholder: Windows 11, Docker Desktop, navigateur et commit
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs non sensibles
+      description: Ne colle jamais STM_API_KEY ni un payload réel.
+

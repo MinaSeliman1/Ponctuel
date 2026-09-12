@@ -1,0 +1,25 @@
+name: Proposer une fonctionnalité
+description: Proposer une amélioration documentée pour Ponctuel.
+title: "[Feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problème utilisateur
+      description: Quel besoin concret doit être résolu ?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposition
+      description: Décris le comportement attendu et les limites.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critères d’acceptation
+      description: Comment vérifier que la fonctionnalité est terminée ?
+

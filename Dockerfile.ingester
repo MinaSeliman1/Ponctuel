@@ -1,0 +1,28 @@
+FROM golang:1.27.1-alpine AS build
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o /out/ingester ./cmd/ingester
+
+FROM alpine:3.22
+
+RUN addgroup -S ponctuel && adduser -S ponctuel -G ponctuel
+WORKDIR /app
+COPY --from=build /out/ingester /app/ingester
+COPY testdata/realtime /app/testdata/realtime
+RUN mkdir -p /app/data/raw && chown -R ponctuel:ponctuel /app
+USER ponctuel
+
+ENV APP_ENV=fixture \
+    INGESTER_HTTP_ADDR=:8081 \
+    FIXTURE_DIR=/app/testdata/realtime \
+    RAW_DATA_DIR=/app/data/raw \
+    POLL_INTERVAL=30s \
+    FRESHNESS_WINDOW=168h
+
+EXPOSE 8081
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=12 CMD wget -qO- http://127.0.0.1:8081/readyz >/dev/null || exit 1
+ENTRYPOINT ["/app/ingester"]
+

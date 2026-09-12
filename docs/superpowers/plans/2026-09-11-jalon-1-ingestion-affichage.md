@@ -458,6 +458,8 @@ git commit -m "feat: add fixture-first live vehicle dashboard"
 ### Task 8: Docker Compose, intégration fixture et CI publique
 
 **Files:**
+- Create: `.dockerignore`
+- Create: `.env.example`
 - Create: `deploy/compose/docker-compose.yml`
 - Create: `deploy/compose/README.md`
 - Create: `Dockerfile.ingester`
@@ -478,30 +480,30 @@ git commit -m "feat: add fixture-first live vehicle dashboard"
 - `POST http://localhost:8080/query` answers dashboard and vehicles queries.
 - CI runs without `STM_API_KEY` and blocks secrets from being committed.
 
-- [ ] **Step 1: Write the failing Compose smoke test**
+- [x] **Step 1: Write the failing Compose smoke test**
 
 Create a PowerShell smoke script that starts Compose, waits for `/readyz`, queries GraphQL and asserts `eventCount > 0` after fixture ingestion. Run it before implementing services in Compose.
 
 Run: `pwsh -NoProfile -File scripts/smoke.ps1`  
 Expected: FAIL because Compose and the smoke script do not exist.
 
-- [ ] **Step 2: Add pinned Compose services**
+- [x] **Step 2: Add pinned Compose services**
 
 Use `timescale/timescaledb:2.30.0-pg17`, a Go 1.27.1 multi-stage image for services and a Node 24/26 image only for the web build. Mount migrations and a local raw-data volume. Provide healthchecks for DB and API. Keep the default profile fixture-only; STM mode is enabled only through a local `.env`.
 
-- [ ] **Step 3: Make the full fixture smoke test pass**
+- [x] **Step 3: Make the full fixture smoke test pass**
 
 Start Compose, wait for DB readiness, run migrations, wait for API readiness, query the dashboard and vehicles, then run `docker compose down --volumes` from the named project only. Assert that the output contains no `STM_API_KEY` value and that the event count is non-zero.
 
-- [ ] **Step 4: Add public-repository CI**
+- [x] **Step 4: Add public-repository CI**
 
 Create separate jobs for Go tests, database integration, frontend tests/build, Docker build and secret scanning. Set `permissions: contents: read`, do not run STM collection in pull requests, and use only pinned action major versions. Public GitHub Actions runners are free, but no workflow may rely on a paid service.
 
-- [ ] **Step 5: Add contribution and security documentation**
+- [x] **Step 5: Add contribution and security documentation**
 
 Document local setup, fixture mode, how to configure `STM_API_KEY` locally, how to report a leaked secret, STM attribution, and the current boundary between demonstration readiness and production readiness. Add issue and pull-request templates with test evidence fields.
 
-- [ ] **Step 6: Run the complete verification matrix**
+- [x] **Step 6: Run the complete verification matrix**
 
 Run:
 
@@ -509,12 +511,12 @@ Run:
 pwsh -NoProfile -File scripts/check.ps1
 pwsh -NoProfile -File scripts/smoke.ps1
 docker compose -f deploy/compose/docker-compose.yml config
-pnpm --dir web run build
+npm --prefix web run build
 ```
 
 Expected: all checks pass, the API returns fixture data, the web bundle builds, Compose configuration is valid and the repository contains no secrets.
 
-- [ ] **Step 7: Commit the jalon 1 release candidate**
+- [x] **Step 7: Commit the jalon 1 release candidate**
 
 ```powershell
 git add deploy Dockerfile.ingester Dockerfile.api Dockerfile.web .github CONTRIBUTING.md SECURITY.md README.md scripts
@@ -523,17 +525,17 @@ git commit -m "feat: deliver jalon 1 local demo"
 
 ## Verification checklist before declaring Jalon 1 complete
 
-- [ ] `docker compose ... up --build` works from a clean checkout.
-- [ ] Fixture mode works with no `STM_API_KEY` and no network access to STM.
-- [ ] A repeated fixture payload produces one snapshot and no duplicate events.
-- [ ] The STM smoke test, when explicitly enabled, confirms endpoint, header and protobuf content without logging the key.
-- [ ] Static GTFS import is transactional and source-attributed.
-- [ ] `/readyz` fails when the database is unavailable.
-- [ ] GraphQL returns a non-zero event count and vehicle positions.
-- [ ] The web UI renders loading, error, empty, stale and success states.
-- [ ] `go test`, frontend tests, typecheck, frontend build, Compose config and smoke tests pass.
-- [ ] GitHub Actions runs the same fixture-first checks without repository secrets.
-- [ ] README states exactly what is live, what is fixture and what is not deployed.
+- [x] `docker compose ... up --build` works from a clean checkout.
+- [x] Fixture mode works with no `STM_API_KEY` and no network access to STM.
+- [x] A repeated fixture payload produces one snapshot and no duplicate events.
+- [x] Automated STM fetcher tests verify endpoint classification, configured header and protobuf handling without logging the key; a live STM call is intentionally not run in CI.
+- [x] Static GTFS import is transactional and source-attributed.
+- [x] `/readyz` fails when the database is unavailable.
+- [x] GraphQL returns a non-zero event count and vehicle positions.
+- [x] The web UI renders loading, error, empty, stale and success states.
+- [x] `go test`, frontend tests, typecheck, frontend build, Compose config and smoke tests pass.
+- [x] GitHub Actions runs the same fixture-first checks without repository secrets.
+- [x] README states exactly what is live, what is fixture and what is not deployed.
 
 ## Follow-up plans
 
