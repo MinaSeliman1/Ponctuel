@@ -1,0 +1,16 @@
+Ponctuel {{ .Chart.Version }} a été rendu pour le namespace {{ .Release.Namespace }}.
+
+Avant le premier déploiement, crée le ConfigMap des migrations depuis la racine
+du dépôt :
+
+  kubectl -n {{ .Release.Namespace }} create configmap {{ .Values.database.migrationsConfigMap }} \
+    --from-file=db/migrations --dry-run=client -o yaml | kubectl apply -f -
+
+Les services internes sont disponibles avec les noms :
+  {{ include "ponctuel.fullname" . }}-db:{{ .Values.database.servicePort }}
+  {{ include "ponctuel.fullname" . }}-redpanda:{{ .Values.redpanda.servicePort }}
+  {{ include "ponctuel.fullname" . }}-api:8080
+  {{ include "ponctuel.fullname" . }}-web:80
+
+Ce chart est prévu pour un cluster local/k3s. Vérifie les probes avec :
+  kubectl -n {{ .Release.Namespace }} get pods,svc,pvc

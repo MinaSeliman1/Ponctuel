@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ponctuel.fullname" . }}-redpanda
+  labels:
+    {{- include "ponctuel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redpanda
+spec:
+  type: ClusterIP
+  ports:
+    - name: kafka
+      port: {{ .Values.redpanda.servicePort }}
+      targetPort: kafka
+    - name: admin
+      port: 9644
+      targetPort: admin
+  selector:
+    {{- include "ponctuel.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: redpanda

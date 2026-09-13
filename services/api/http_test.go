@@ -48,6 +48,26 @@ func TestGraphQLDashboardMarksOldDataStale(t *testing.T) {
 	}
 }
 
+func TestGraphQLErrorSummaryMapsAndLimitsRows(t *testing.T) {
+	repository := &apiFakeRepository{errorSummaries: []domain.ErrorSummary{
+		{RouteID: "51", HorizonSeconds: 300, SampleCount: 4, MeanErrorSeconds: 42.5, OnTimeRate: 0.75},
+		{RouteID: "80", HorizonSeconds: 600, SampleCount: 2, MeanErrorSeconds: -15, OnTimeRate: 1},
+	}}
+	handler := NewHTTPHandler(HTTPConfig{Mode: "fixture", FreshnessWindow: time.Minute}, repository, nil)
+	response := postGraphQL(t, handler, `{"query":"{ errorSummary(limit: 1) { routeId horizonSeconds sampleCount meanErrorSeconds onTimeRate } }"}`, "")
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), `"routeId":"51"`) || strings.Contains(response.Body.String(), `"routeId":"80"`) {
+		t.Fatalf("error summary response = %d %s", response.Code, response.Body.String())
+	}
+}
+
+func TestGraphQLErrorSummaryRejectsNegativeLimit(t *testing.T) {
+	handler := NewHTTPHandler(HTTPConfig{Mode: "fixture", FreshnessWindow: time.Minute}, &apiFakeRepository{}, nil)
+	response := postGraphQL(t, handler, `{"query":"{ errorSummary(limit: -1) { horizonSeconds } }"}`, "")
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "error summary limit must not be negative") {
+		t.Fatalf("negative error summary response = %d %s", response.Code, response.Body.String())
+	}
+}
+
 func TestGraphQLReadyFailsWhenDatabasePingFails(t *testing.T) {
 	repository := &apiFakeRepository{pingErr: context.Canceled}
 	handler := NewHTTPHandler(HTTPConfig{Mode: "fixture", FreshnessWindow: time.Minute}, repository, nil)
@@ -83,6 +103,7 @@ type apiFakeRepository struct {
 	eventCount      int64
 	latestCollected time.Time
 	vehicles        []domain.Vehicle
+	errorSummaries  []domain.ErrorSummary
 	pingErr         error
 }
 
@@ -98,6 +119,9 @@ func (r *apiFakeRepository) InsertArrival(context.Context, domain.ArrivalObserve
 	return false, nil
 }
 func (r *apiFakeRepository) LatestStops(context.Context) ([]domain.Stop, error) { return nil, nil }
+func (r *apiFakeRepository) ErrorSummary(context.Context, int) ([]domain.ErrorSummary, error) {
+	return r.errorSummaries, nil
+}
 func (r *apiFakeRepository) InsertSnapshot(context.Context, domain.FeedSnapshot) (int64, bool, error) {
 	return 0, false, nil
 }

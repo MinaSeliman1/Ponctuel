@@ -1,53 +1,162 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { fetchDashboard, fetchVehicles } from './api/client'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { fetchDashboard, fetchErrorSummary, fetchVehicles } from './api/client'
+import ErrorQualityChart from './components/ErrorQualityChart.vue'
 import StatusPanel from './components/StatusPanel.vue'
 import VehicleMap from './components/VehicleMap.vue'
 import VehicleTable from './components/VehicleTable.vue'
-import type { Dashboard, Vehicle } from './types'
+import type { Dashboard, ErrorSummary, Vehicle } from './types'
 
 const dashboard = ref<Dashboard | null>(null)
 const vehicles = ref<Vehicle[]>([])
+const errorSummaries = ref<ErrorSummary[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
+const qualityError = ref(false)
+const refreshError = ref(false)
+const isRefreshing = ref(false)
+const preferencesOpen = ref(false)
+const autoRefreshEnabled = ref(true)
+const preferencesTrigger = ref<HTMLButtonElement | null>(null)
+const preferencesPanel = ref<HTMLDivElement | null>(null)
 let controller: AbortController | null = null
+let refreshTimer: number | undefined
+const refreshIntervalMs = 30_000
 
 const modeLabel = computed(() => dashboard.value?.mode.toLowerCase() === 'stm' ? 'Temps réel' : 'Fixture local')
 
+function isAbortError(reason: unknown): boolean {
+  return reason instanceof DOMException && reason.name === 'AbortError'
+}
+
 async function loadData() {
+  if (controller !== null && (isLoading.value || isRefreshing.value)) return
+
+  const hasExistingData = dashboard.value !== null || vehicles.value.length > 0 || errorSummaries.value.length > 0
   controller?.abort()
-  controller = new AbortController()
-  isLoading.value = true
+  const currentController = new AbortController()
+  controller = currentController
+  if (hasExistingData) {
+    isRefreshing.value = true
+  } else {
+    isLoading.value = true
+  }
   error.value = null
-  try {
-    const [nextDashboard, nextVehicles] = await Promise.all([
-      fetchDashboard(controller.signal),
-      fetchVehicles(500, controller.signal),
-    ])
-    dashboard.value = nextDashboard
-    vehicles.value = nextVehicles
-  } catch (cause) {
-    if (cause instanceof DOMException && cause.name === 'AbortError') return
-    error.value = 'unavailable'
-  } finally {
+  qualityError.value = false
+  refreshError.value = false
+  if (!hasExistingData) {
+    errorSummaries.value = []
+  }
+
+  const [dashboardResult, vehiclesResult, qualityResult] = await Promise.allSettled([
+    fetchDashboard(currentController.signal),
+    fetchVehicles(500, currentController.signal),
+    fetchErrorSummary(100, currentController.signal),
+  ])
+
+  if (dashboardResult.status === 'fulfilled') {
+    dashboard.value = dashboardResult.value
+  } else if (!isAbortError(dashboardResult.reason)) {
+    if (hasExistingData) refreshError.value = true
+    else error.value = 'unavailable'
+  }
+
+  if (vehiclesResult.status === 'fulfilled') {
+    vehicles.value = vehiclesResult.value
+  } else if (!isAbortError(vehiclesResult.reason)) {
+    if (hasExistingData) refreshError.value = true
+    else error.value = 'unavailable'
+  }
+
+  if (qualityResult.status === 'fulfilled') {
+    errorSummaries.value = qualityResult.value
+  } else if (!isAbortError(qualityResult.reason)) {
+    if (hasExistingData) refreshError.value = true
+    else qualityError.value = true
+  }
+
+  if (controller === currentController) {
     isLoading.value = false
+    isRefreshing.value = false
   }
 }
 
-onMounted(loadData)
-onUnmounted(() => controller?.abort())
+function stopRefreshTimer(): void {
+  if (refreshTimer !== undefined) {
+    window.clearInterval(refreshTimer)
+    refreshTimer = undefined
+  }
+}
+
+function scheduleRefresh(): void {
+  stopRefreshTimer()
+  if (autoRefreshEnabled.value) {
+    refreshTimer = window.setInterval(() => void loadData(), refreshIntervalMs)
+  }
+}
+
+function focusPreferencesContent(): void {
+  void nextTick(() => preferencesPanel.value?.querySelector<HTMLInputElement | HTMLButtonElement>('input, button')?.focus())
+}
+
+function openPreferences(): void {
+  preferencesOpen.value = true
+  focusPreferencesContent()
+}
+
+function closePreferences(): void {
+  preferencesOpen.value = false
+  void nextTick(() => preferencesTrigger.value?.focus())
+}
+
+function togglePreferences(): void {
+  if (preferencesOpen.value) {
+    closePreferences()
+  } else {
+    openPreferences()
+  }
+}
+
+watch(autoRefreshEnabled, scheduleRefresh)
+
+onMounted(() => {
+  void loadData()
+  scheduleRefresh()
+})
+onUnmounted(() => {
+  controller?.abort()
+  stopRefreshTimer()
+})
 </script>
 
 <template>
   <div class="app-shell">
     <header class="topbar">
       <div class="brand-lockup"><span class="brand-name">Ponctuel</span><span class="brand-divider" aria-hidden="true"></span><span class="brand-context">Réseau STM</span></div>
-      <div class="topbar-actions"><span class="live-clock">Suivi des positions</span><button class="icon-button" type="button" aria-label="Préférences"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.8 1.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.1h-2.6v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-1.8-1.8.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H6.4v-2.6h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 1.8-1.8.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V4.4H15v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.8 1.8-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1V13h-.1a1.7 1.7 0 0 0-1.5 1Z" /></svg></button></div>
+      <div class="topbar-actions">
+        <span class="live-clock">Suivi des positions</span>
+        <div class="preferences-wrap">
+          <button ref="preferencesTrigger" class="icon-button" type="button" aria-label="Préférences" aria-controls="preferences-panel" :aria-expanded="preferencesOpen" aria-haspopup="dialog" @click="togglePreferences">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3m0 14v3M2 12h3m14 0h3m-4.9-7.1-2.1 2.1m-10 10-2.1 2.1m0-14.2 2.1 2.1m10 10 2.1 2.1" /></svg>
+          </button>
+          <div v-if="preferencesOpen" ref="preferencesPanel" id="preferences-panel" class="preferences-panel" role="dialog" aria-labelledby="preferences-title" aria-describedby="preferences-description" tabindex="-1" @keydown.esc.stop="closePreferences">
+            <h2 id="preferences-title">Préférences</h2>
+            <label class="preference-toggle">
+              <input v-model="autoRefreshEnabled" type="checkbox" />
+              <span>Actualisation automatique</span>
+            </label>
+            <p id="preferences-description" v-if="autoRefreshEnabled">Les données sont rafraîchies toutes les 30 secondes.</p>
+            <p id="preferences-description" v-else>Actualisation automatique suspendue. Le bouton Actualiser reste disponible.</p>
+            <button class="text-button" type="button" @click="closePreferences">Fermer</button>
+          </div>
+        </div>
+      </div>
     </header>
     <main class="main-content">
-      <StatusPanel :dashboard="dashboard" :is-loading="isLoading" :error="error" @refresh="loadData" />
+      <StatusPanel :dashboard="dashboard" :is-loading="isLoading" :is-refreshing="isRefreshing" :error="error" :refresh-error="refreshError" @refresh="loadData" />
       <div class="content-heading"><div><span class="eyebrow">Réseau en direct</span><h1>Les autobus, au bon moment.</h1></div><span class="mode-summary"><span class="mode-dot"></span>{{ modeLabel }}</span></div>
       <VehicleMap :vehicles="vehicles" :is-loading="isLoading" />
+      <ErrorQualityChart :summaries="errorSummaries" :is-loading="isLoading" :has-error="qualityError" :stale="dashboard?.stale ?? false" />
       <VehicleTable :vehicles="vehicles" :is-loading="isLoading" :error="error" />
     </main>
     <footer class="app-footer"><span>Données STM · Visualisation Ponctuel</span><a href="https://www.stm.info/fr/a-propos/developpeurs" target="_blank" rel="noreferrer">Source et conditions d’utilisation</a></footer>

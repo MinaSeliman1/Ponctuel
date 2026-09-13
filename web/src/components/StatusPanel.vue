@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type { Dashboard } from '../types'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   dashboard: Dashboard | null
   isLoading: boolean
   error: string | null
-}>()
+  isRefreshing?: boolean
+  refreshError?: boolean
+}>(), { isRefreshing: false, refreshError: false })
 
 defineEmits<{ refresh: [] }>()
 
@@ -46,7 +48,21 @@ function modeLabel(mode: string): string {
       <p class="status-value">{{ formatDate(props.dashboard?.lastCollectedAt ?? null) }}</p>
       <p class="status-detail">{{ relativeLabel(props.dashboard?.lastCollectedAt ?? null) }}</p>
     </template>
-    <button v-if="props.error" class="text-button" type="button" @click="$emit('refresh')">Réessayer</button>
+    <p v-if="props.refreshError" class="status-detail status-refresh-error" role="alert">
+      Actualisation impossible. Les dernières données valides sont conservées. Vous pouvez réessayer.
+    </p>
+    <div v-if="!props.isLoading" class="refresh-actions">
+      <button
+        class="text-button"
+        type="button"
+        aria-label="Actualiser les données"
+        :disabled="props.isRefreshing"
+        @click="$emit('refresh')"
+      >
+        {{ props.error || props.refreshError ? 'Réessayer' : 'Actualiser' }}
+      </button>
+      <span v-if="props.isRefreshing" class="refresh-status" role="status">Actualisation des données…</span>
+    </div>
   </div>
 
   <div class="status-metric">

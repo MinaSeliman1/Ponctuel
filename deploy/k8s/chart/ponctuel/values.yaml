@@ -1,0 +1,67 @@
+nameOverride: ""
+fullnameOverride: ""
+
+images:
+  pullPolicy: IfNotPresent
+  api:
+    repository: ghcr.io/minaseliman1/ponctuel-api
+    tag: "0.3.0"
+  ingester:
+    repository: ghcr.io/minaseliman1/ponctuel-ingester
+    tag: "0.3.0"
+  matcher:
+    repository: ghcr.io/minaseliman1/ponctuel-matcher
+    tag: "0.3.0"
+  web:
+    repository: ghcr.io/minaseliman1/ponctuel-web
+    tag: "0.3.0"
+
+replicas:
+  api: 1
+  ingester: 1
+  matcher: 1
+  web: 1
+
+serviceAccount:
+  create: true
+  name: ""
+
+service:
+  type: ClusterIP
+
+config:
+  appEnv: fixture
+  pollInterval: 30s
+  freshnessWindow: 168h
+  geofenceRadiusMeters: 60
+  apiAllowedOrigins: ""
+  stmTripUpdatesURL: https://api.stm.info/pub/od/gtfs-rt/ic/v2/tripUpdates
+  stmVehiclePositionsURL: https://api.stm.info/pub/od/gtfs-rt/ic/v2/vehiclePositions
+  stmApiKeyHeader: apikey
+  redpandaGroupID: ponctuel-matcher
+  topics:
+    tripUpdates: trip-updates
+    vehiclePositions: vehicle-positions
+
+database:
+  image: timescale/timescaledb:2.30.0-pg17
+  name: ponctuel
+  user: ponctuel
+  password: ponctuel-dev-only
+  storage: 2Gi
+  servicePort: 5432
+  migrationsConfigMap: ponctuel-migrations
+
+redpanda:
+  image: docker.redpanda.com/redpandadata/redpanda:v26.2.2
+  storage: 2Gi
+  servicePort: 9092
+
+secrets:
+  stmApiKey: ""
+
+resources: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

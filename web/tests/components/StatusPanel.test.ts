@@ -36,4 +36,27 @@ describe('StatusPanel', () => {
     expect(wrapper.text()).toContain('Impossible de charger les données')
     expect(wrapper.text()).not.toContain('database password')
   })
+
+  it('emits refresh and announces an in-progress refresh', async () => {
+    const wrapper = mount(StatusPanel, {
+      props: {
+        dashboard: {
+          eventCount: 42,
+          lastCollectedAt: '2026-09-12T14:00:00Z',
+          mode: 'fixture',
+          stale: false,
+        },
+        isLoading: false,
+        isRefreshing: false,
+        error: null,
+      },
+    })
+
+    await wrapper.get('button[aria-label="Actualiser les données"]').trigger('click')
+    expect(wrapper.emitted('refresh')).toHaveLength(1)
+
+    await wrapper.setProps({ isRefreshing: true })
+    expect(wrapper.text()).toContain('Actualisation des données')
+    expect(wrapper.get('button[aria-label="Actualiser les données"]').attributes('disabled')).toBeDefined()
+  })
 })

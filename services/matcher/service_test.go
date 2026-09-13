@@ -127,3 +127,6 @@ func (r *serviceRepository) InsertArrival(_ context.Context, arrival domain.Arri
 func (r *serviceRepository) LatestStops(context.Context) ([]domain.Stop, error) {
 	return nil, nil
 }
+func (r *serviceRepository) ErrorSummary(context.Context, int) ([]domain.ErrorSummary, error) {
+	return nil, nil
+}

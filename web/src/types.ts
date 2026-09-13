@@ -14,3 +14,11 @@ export interface Vehicle {
   recordedAt: string
   delaySeconds: number | null
 }
+
+export interface ErrorSummary {
+  routeId: string | null
+  horizonSeconds: number
+  sampleCount: number
+  meanErrorSeconds: number
+  onTimeRate: number
+}

@@ -1,10 +1,10 @@
 # Ponctuel
 
 Ponctuel mesure l’écart entre les prédictions d’arrivée des autobus de la STM
-et les arrivées observées. Les jalons 1 et 2 fournissent une démonstration
+et les arrivées observées. Les jalons 1 à 22 fournissent une démonstration
 complète, reproductible et gratuite : ingestion GTFS-Realtime, transport
-Redpanda, matcher d’arrivée, persistance TimescaleDB, API GraphQL et dashboard
-Vue.
+Redpanda, matcher d’arrivée, mesure d’erreur TimescaleDB, API GraphQL,
+predictor Python optionnel et dashboard Vue.
 
 ## Démonstration en une commande
 
@@ -40,9 +40,9 @@ GTFS-Realtime fixture ou STM
                                                        │
                                                        ▼
                                               API GraphQL Go
-                                  │
-                                  ▼
-                         Vue 3 + dashboard SVG
+                                                       │
+                                                       ▼
+                                              Vue 3 + dashboard SVG
 ```
 
 - `services/ingester` décode, normalise et déduplique les snapshots protobuf.
@@ -54,8 +54,57 @@ GTFS-Realtime fixture ou STM
 - `services/api` expose uniquement les champs nécessaires au dashboard, avec
   limites de taille, complexité GraphQL, CORS explicite et endpoints de santé.
 - `web` affiche les états chargement, erreur, vide, données vieillissantes et
-  succès. La carte est un SVG schématique déterministe : aucune tuile externe
-  n’est requise pour la démo publique.
+  succès. Le panneau de qualité regroupe les erreurs par horizon avec une
+  moyenne pondérée par le nombre d’observations, puis fournit un tableau
+  textuel en complément du graphique SVG accessible. La carte est un SVG
+  schématique déterministe : aucune tuile externe n’est requise pour la démo
+  publique. Le tableau des véhicules possède une recherche, des filtres réels
+  par ligne et par retard, ainsi qu’une pagination locale accessible.
+- Le dashboard propose un rafraîchissement manuel et automatique toutes les
+  30 secondes; les données existantes restent visibles pendant la relance.
+- Si une actualisation échoue, les dernières données valides restent visibles
+  et un avertissement permet de relancer l’opération sans perdre la vue.
+- Les préférences permettent de suspendre l’actualisation automatique sans
+  désactiver le bouton de rafraîchissement manuel.
+- Les panneaux Préférences et Filtres sont utilisables au clavier : le focus
+  entre sur le premier contrôle, Échap ferme le panneau et le focus revient au
+  bouton d’origine.
+- Le tableau permet d’exporter en CSV les véhicules correspondant à la recherche
+  et aux filtres actifs, directement dans le navigateur.
+- La recherche et les filtres sont partageables via les paramètres de l’URL,
+  sans rechargement ni stockage de données côté serveur.
+- Le bouton « Copier le lien » permet de partager directement l’état courant
+  des filtres depuis le tableau.
+- Le tableau affiche aussi les filtres actifs sous forme de pastilles
+  supprimables individuellement, avec une réinitialisation globale.
+- Le compteur de filtres inclut la recherche et reste aligné sur les pastilles
+  réellement affichées.
+- Le tableau permet de trier localement les véhicules par ordre d’arrivée,
+  ligne, identifiant ou retard décroissant.
+- L’ordre de tri est également restauré et partagé via le paramètre URL `sort`.
+- Le tableau se resynchronise aussi lors des actions retour/avance du navigateur.
+- Les marqueurs de la carte sont sélectionnables à la souris ou au clavier et
+  affichent une fiche accessible avec les détails du véhicule.
+- Les contrôles de carte correspondent aux couches réellement disponibles et
+  la légende explique les couleurs de retard des véhicules.
+- La fiche d’un autobus se ferme avec Échap et restitue le focus au marqueur
+  pour conserver un parcours clavier continu.
+
+## Mesure et predictor
+
+Le jalon 4 relie chaque arrivée à ses prédictions correspondantes et expose
+les agrégats `errorSummary` par ligne et horizon. Le service Python
+`services/predictor` entraîne un `GradientBoostingRegressor` avec séparation
+temporelle et baseline zéro; il ne lit ni PostgreSQL, ni Redpanda, ni secret
+STM. L’artefact Joblib est fourni séparément par un pipeline d’entraînement et
+n’est pas versionné. La méthode, les limites et les conditions pour publier
+un résultat réel sont documentées dans [docs/resultats.md](docs/resultats.md).
+
+Le dashboard affiche cette mesure dans le panneau « Qualité des prédictions ».
+Chaque horizon regroupe les résumés par ligne en conservant leur `sampleCount`;
+une panne ou une absence de données de qualité ne bloque ni la carte ni la
+liste des véhicules. Les fixtures permettent de vérifier le contrat visuel et
+ne constituent pas une mesure STM.
 
 ## Vérifications locales
 
@@ -69,9 +118,23 @@ npm --prefix web run build
 docker compose -f deploy/compose/docker-compose.yml config
 ```
 
+Le parcours navigateur utilise Chromium et des fixtures GraphQL locales; il
+ne contacte pas STM et ne mesure pas la disponibilité de l’API réelle :
+
+```powershell
+Push-Location web
+npx playwright install chromium
+npm run test:e2e
+Pop-Location
+```
+
+Le smoke test Compose reste le contrôle d’intégration des services backend.
+
 Pour les détails Compose, voir [deploy/compose/README.md](deploy/compose/README.md).
 Les règles de contribution et de sécurité sont dans
-[CONTRIBUTING.md](CONTRIBUTING.md) et [SECURITY.md](SECURITY.md).
+[CONTRIBUTING.md](CONTRIBUTING.md) et [SECURITY.md](SECURITY.md). Le chart
+Kubernetes local et sa procédure de validation sont dans
+[deploy/k8s/README.md](deploy/k8s/README.md).
 
 ## Mode STM réel
 
@@ -99,8 +162,9 @@ l’attribution et les conditions d’utilisation officielles STM.
 
 ## Statut du projet
 
-Les jalons 1 et 2 sont prêts pour une démonstration locale et un portfolio
-public. La démonstration complète reste locale et gratuite. Le projet ne
+Les jalons 1 à 22 sont prêts pour une démonstration locale, un déploiement k3s
+documenté et un portfolio public. La démonstration complète reste locale et
+gratuite. Le projet ne
 prétend pas être un service de production : authentification, haute
 disponibilité, rotation automatisée des secrets, rétention opérationnelle et
 SLA restent hors périmètre.

@@ -44,9 +44,18 @@ type ComplexityRoot struct {
 		Stale           func(childComplexity int) int
 	}
 
+	ErrorSummary struct {
+		HorizonSeconds   func(childComplexity int) int
+		MeanErrorSeconds func(childComplexity int) int
+		OnTimeRate       func(childComplexity int) int
+		RouteID          func(childComplexity int) int
+		SampleCount      func(childComplexity int) int
+	}
+
 	Query struct {
-		Dashboard func(childComplexity int) int
-		Vehicles  func(childComplexity int, limit *int) int
+		Dashboard    func(childComplexity int) int
+		ErrorSummary func(childComplexity int, limit *int) int
+		Vehicles     func(childComplexity int, limit *int) int
 	}
 
 	Vehicle struct {
@@ -67,6 +76,7 @@ type ComplexityRoot struct {
 type QueryResolver interface {
 	Dashboard(ctx context.Context) (*model.Dashboard, error)
 	Vehicles(ctx context.Context, limit *int) ([]*model.Vehicle, error)
+	ErrorSummary(ctx context.Context, limit *int) ([]*model.ErrorSummary, error)
 }
 
 // endregion ************************** generated!.gotpl **************************
@@ -112,12 +122,54 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Dashboard.Stale(childComplexity), true
 
+	case "ErrorSummary.horizonSeconds":
+		if e.ComplexityRoot.ErrorSummary.HorizonSeconds == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ErrorSummary.HorizonSeconds(childComplexity), true
+	case "ErrorSummary.meanErrorSeconds":
+		if e.ComplexityRoot.ErrorSummary.MeanErrorSeconds == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ErrorSummary.MeanErrorSeconds(childComplexity), true
+	case "ErrorSummary.onTimeRate":
+		if e.ComplexityRoot.ErrorSummary.OnTimeRate == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ErrorSummary.OnTimeRate(childComplexity), true
+	case "ErrorSummary.routeId":
+		if e.ComplexityRoot.ErrorSummary.RouteID == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ErrorSummary.RouteID(childComplexity), true
+	case "ErrorSummary.sampleCount":
+		if e.ComplexityRoot.ErrorSummary.SampleCount == nil {
+			break
+		}
+
+		return e.ComplexityRoot.ErrorSummary.SampleCount(childComplexity), true
+
 	case "Query.dashboard":
 		if e.ComplexityRoot.Query.Dashboard == nil {
 			break
 		}
 
 		return e.ComplexityRoot.Query.Dashboard(childComplexity), true
+	case "Query.errorSummary":
+		if e.ComplexityRoot.Query.ErrorSummary == nil {
+			break
+		}
+
+		args, err := ec.field_Query_errorSummary_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.Query.ErrorSummary(childComplexity, args["limit"].(*int)), true
 
 	case "Query.vehicles":
 		if e.ComplexityRoot.Query.Vehicles == nil {
@@ -274,6 +326,22 @@ func (ec *executionContext) childFields_Dashboard(ctx context.Context, field gra
 	return nil, fmt.Errorf("no field named %q was found under type Dashboard", field.Name)
 }
 
+func (ec *executionContext) childFields_ErrorSummary(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "routeId":
+		return ec.fieldContext_ErrorSummary_routeId(ctx, field)
+	case "horizonSeconds":
+		return ec.fieldContext_ErrorSummary_horizonSeconds(ctx, field)
+	case "sampleCount":
+		return ec.fieldContext_ErrorSummary_sampleCount(ctx, field)
+	case "meanErrorSeconds":
+		return ec.fieldContext_ErrorSummary_meanErrorSeconds(ctx, field)
+	case "onTimeRate":
+		return ec.fieldContext_ErrorSummary_onTimeRate(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type ErrorSummary", field.Name)
+}
+
 func (ec *executionContext) childFields_Vehicle(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "vehicleId":
@@ -421,6 +489,20 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_errorSummary_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
+		func(ctx context.Context, v any) (*int, error) {
+			return ec.unmarshalOInt2ᚖint(ctx, v)
+		})
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg0
 	return args, nil
 }
 
@@ -590,6 +672,121 @@ func (ec *executionContext) fieldContext_Dashboard_stale(_ context.Context, fiel
 	return graphql.NewScalarFieldContext("Dashboard", field, false, false, errors.New("field of type Boolean does not have child fields"))
 }
 
+func (ec *executionContext) _ErrorSummary_routeId(ctx context.Context, field graphql.CollectedField, obj *model.ErrorSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ErrorSummary_routeId(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.RouteID, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *string) graphql.Marshaler {
+			return ec.marshalOString2ᚖstring(ctx, selections, v)
+		},
+		true,
+		false,
+	)
+}
+func (ec *executionContext) fieldContext_ErrorSummary_routeId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ErrorSummary", field, false, false, errors.New("field of type String does not have child fields"))
+}
+
+func (ec *executionContext) _ErrorSummary_horizonSeconds(ctx context.Context, field graphql.CollectedField, obj *model.ErrorSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ErrorSummary_horizonSeconds(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.HorizonSeconds, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ErrorSummary_horizonSeconds(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ErrorSummary", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ErrorSummary_sampleCount(ctx context.Context, field graphql.CollectedField, obj *model.ErrorSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ErrorSummary_sampleCount(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.SampleCount, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ErrorSummary_sampleCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ErrorSummary", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _ErrorSummary_meanErrorSeconds(ctx context.Context, field graphql.CollectedField, obj *model.ErrorSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ErrorSummary_meanErrorSeconds(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.MeanErrorSeconds, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ErrorSummary_meanErrorSeconds(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ErrorSummary", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
+func (ec *executionContext) _ErrorSummary_onTimeRate(ctx context.Context, field graphql.CollectedField, obj *model.ErrorSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_ErrorSummary_onTimeRate(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.OnTimeRate, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v float64) graphql.Marshaler {
+			return ec.marshalNFloat2float64(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_ErrorSummary_onTimeRate(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("ErrorSummary", field, false, false, errors.New("field of type Float does not have child fields"))
+}
+
 func (ec *executionContext) _Query_dashboard(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -660,6 +857,50 @@ func (ec *executionContext) fieldContext_Query_vehicles(ctx context.Context, fie
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_vehicles_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_errorSummary(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_errorSummary(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().ErrorSummary(ctx, fc.Args["limit"].(*int))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.ErrorSummary) graphql.Marshaler {
+			return ec.marshalNErrorSummary2ᚕᚖponctuelᚋservicesᚋapiᚋgraphᚋmodelᚐErrorSummaryᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_errorSummary(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_ErrorSummary(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_errorSummary_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -2023,6 +2264,64 @@ func (ec *executionContext) _Dashboard(ctx context.Context, sel ast.SelectionSet
 	return out
 }
 
+var errorSummaryImplementors = []string{"ErrorSummary"}
+
+func (ec *executionContext) _ErrorSummary(ctx context.Context, sel ast.SelectionSet, obj *model.ErrorSummary) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, errorSummaryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ErrorSummary")
+		case "routeId":
+			out.Values[i] = ec._ErrorSummary_routeId(ctx, field, obj)
+			if out.Values[i] == graphql.RequiredNull {
+				out.Invalids++
+			}
+		case "horizonSeconds":
+			out.Values[i] = ec._ErrorSummary_horizonSeconds(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "sampleCount":
+			out.Values[i] = ec._ErrorSummary_sampleCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "meanErrorSeconds":
+			out.Values[i] = ec._ErrorSummary_meanErrorSeconds(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "onTimeRate":
+			out.Values[i] = ec._ErrorSummary_onTimeRate(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
 var queryImplementors = []string{"Query"}
 
 func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -2075,6 +2374,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_vehicles(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "errorSummary":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_errorSummary(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -2610,6 +2931,32 @@ func (ec *executionContext) marshalNDashboard2ᚖponctuelᚋservicesᚋapiᚋgra
 		return graphql.Null
 	}
 	return ec._Dashboard(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNErrorSummary2ᚕᚖponctuelᚋservicesᚋapiᚋgraphᚋmodelᚐErrorSummaryᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ErrorSummary) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNErrorSummary2ᚖponctuelᚋservicesᚋapiᚋgraphᚋmodelᚐErrorSummary(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNErrorSummary2ᚖponctuelᚋservicesᚋapiᚋgraphᚋmodelᚐErrorSummary(ctx context.Context, sel ast.SelectionSet, v *model.ErrorSummary) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ErrorSummary(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNFloat2float64(ctx context.Context, v any) (float64, error) {
