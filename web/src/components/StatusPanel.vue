@@ -6,7 +6,8 @@ const props = withDefaults(defineProps<{
   isLoading: boolean
   error: string | null
   isRefreshing?: boolean
-}>(), { isRefreshing: false })
+  refreshError?: boolean
+}>(), { isRefreshing: false, refreshError: false })
 
 defineEmits<{ refresh: [] }>()
 
@@ -47,6 +48,9 @@ function modeLabel(mode: string): string {
       <p class="status-value">{{ formatDate(props.dashboard?.lastCollectedAt ?? null) }}</p>
       <p class="status-detail">{{ relativeLabel(props.dashboard?.lastCollectedAt ?? null) }}</p>
     </template>
+    <p v-if="props.refreshError" class="status-detail status-refresh-error" role="alert">
+      Actualisation impossible. Les dernières données valides sont conservées. Vous pouvez réessayer.
+    </p>
     <div v-if="!props.isLoading" class="refresh-actions">
       <button
         class="text-button"
@@ -55,7 +59,7 @@ function modeLabel(mode: string): string {
         :disabled="props.isRefreshing"
         @click="$emit('refresh')"
       >
-        {{ props.error ? 'Réessayer' : 'Actualiser' }}
+        {{ props.error || props.refreshError ? 'Réessayer' : 'Actualiser' }}
       </button>
       <span v-if="props.isRefreshing" class="refresh-status" role="status">Actualisation des données…</span>
     </div>

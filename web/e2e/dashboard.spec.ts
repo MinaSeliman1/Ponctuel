@@ -25,7 +25,7 @@ const errorSummary = [
   { routeId: '80', horizonSeconds: 300, sampleCount: 2, meanErrorSeconds: -30, onTimeRate: 1 },
 ]
 
-async function routeDashboard(page: Page, options: { qualityUnavailable?: boolean; vehicles?: typeof vehicles } = {}) {
+async function routeDashboard(page: Page, options: { qualityUnavailable?: boolean; refreshUnavailable?: boolean; vehicles?: typeof vehicles } = {}) {
   const requestCounts = { dashboard: 0, vehicles: 0, quality: 0 }
   await page.route('**/query', async (route) => {
     const payload = route.request().postDataJSON() as { query?: string }
@@ -33,6 +33,10 @@ async function routeDashboard(page: Page, options: { qualityUnavailable?: boolea
 
     if (query.includes('ErrorSummary')) {
       requestCounts.quality += 1
+      if (options.refreshUnavailable && requestCounts.quality > 1) {
+        await route.fulfill({ status: 503, body: 'unavailable' })
+        return
+      }
       if (options.qualityUnavailable) {
         await route.fulfill({ status: 503, body: 'unavailable' })
         return
@@ -47,6 +51,10 @@ async function routeDashboard(page: Page, options: { qualityUnavailable?: boolea
 
     if (query.includes('Vehicles')) {
       requestCounts.vehicles += 1
+      if (options.refreshUnavailable && requestCounts.vehicles > 1) {
+        await route.fulfill({ status: 503, body: 'unavailable' })
+        return
+      }
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -57,6 +65,10 @@ async function routeDashboard(page: Page, options: { qualityUnavailable?: boolea
 
     if (query.includes('Dashboard')) {
       requestCounts.dashboard += 1
+      if (options.refreshUnavailable && requestCounts.dashboard > 1) {
+        await route.fulfill({ status: 503, body: 'unavailable' })
+        return
+      }
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -226,6 +238,22 @@ test('actualise les données depuis le navigateur', async ({ page }) => {
   await expect.poll(() => requestCounts.vehicles).toBe(2)
   await expect.poll(() => requestCounts.quality).toBe(2)
   await expect(page.getByText('1234', { exact: true })).toBeVisible()
+})
+
+test('conserve les dernières données si l’actualisation échoue', async ({ page }) => {
+  const requestCounts = await routeDashboard(page, { refreshUnavailable: true })
+  await page.goto('/')
+
+  await expect(page.getByText('1234', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Actualiser les données' }).click()
+  await expect.poll(() => requestCounts.dashboard).toBe(2)
+  await expect.poll(() => requestCounts.vehicles).toBe(2)
+  await expect.poll(() => requestCounts.quality).toBe(2)
+
+  await expect(page.getByText('1234', { exact: true })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('dernières données valides sont conservées')
+  await expect(page.getByRole('button', { name: 'Actualiser les données' })).toContainText('Réessayer')
+  await expect(page.getByRole('button', { name: 'Actualiser les données' })).toBeEnabled()
 })
 
 test('permet de suspendre le rafraîchissement automatique', async ({ page }) => {
