@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "type": "object",
+  "properties": {
+    "images": {
+      "type": "object",
+      "required": ["api", "ingester", "matcher", "web"],
+      "properties": {
+        "pullPolicy": {"type": "string", "enum": ["Always", "IfNotPresent", "Never"]}
+      }
+    },
+    "replicas": {
+      "type": "object",
+      "properties": {
+        "api": {"type": "integer", "minimum": 1},
+        "ingester": {"type": "integer", "minimum": 1},
+        "matcher": {"type": "integer", "minimum": 1},
+        "web": {"type": "integer", "minimum": 1}
+      }
+    },
+    "config": {
+      "type": "object",
+      "properties": {
+        "appEnv": {"type": "string", "enum": ["fixture", "stm"]},
+        "geofenceRadiusMeters": {"type": "number", "exclusiveMinimum": 0, "maximum": 1000}
+      }
+    },
+    "database": {
+      "type": "object",
+      "required": ["image", "name", "user", "password", "migrationsConfigMap"],
+      "properties": {
+        "storage": {"type": "string", "minLength": 1},
+        "servicePort": {"type": "integer", "minimum": 1, "maximum": 65535}
+      }
+    },
+    "redpanda": {
+      "type": "object",
+      "required": ["image"],
+      "properties": {
+        "storage": {"type": "string", "minLength": 1},
+        "servicePort": {"type": "integer", "minimum": 1, "maximum": 65535}
+      }
+    }
+  }
+}

@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "ponctuel.fullname" . }}-redpanda
+  labels:
+    {{- include "ponctuel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redpanda
+spec:
+  serviceName: {{ include "ponctuel.fullname" . }}-redpanda
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "ponctuel.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: redpanda
+  template:
+    metadata:
+      labels:
+        {{- include "ponctuel.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: redpanda
+    spec:
+      serviceAccountName: {{ include "ponctuel.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      containers:
+        - name: redpanda
+          image: {{ .Values.redpanda.image | quote }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          command: ["redpanda", "start"]
+          args:
+            - --kafka-addr
+            - internal://0.0.0.0:9092
+            - --advertise-kafka-addr
+            - internal://{{ include "ponctuel.fullname" . }}-redpanda:9092
+            - --rpc-addr
+            - 0.0.0.0:33145
+            - --advertise-rpc-addr
+            - {{ include "ponctuel.fullname" . }}-redpanda:33145
+            - --mode
+            - dev-container
+            - --smp
+            - "1"
+            - --default-log-level=info
+          ports:
+            - name: kafka
+              containerPort: {{ .Values.redpanda.servicePort }}
+            - name: admin
+              containerPort: 9644
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "rpk topic list --brokers 127.0.0.1:9092 >/dev/null"]
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "rpk cluster info --brokers 127.0.0.1:9092 >/dev/null"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/redpanda/data
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        labels:
+          {{- include "ponctuel.labels" . | nindent 10 }}
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.redpanda.storage }}

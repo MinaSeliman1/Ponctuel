@@ -1,0 +1,20 @@
+images:
+  pullPolicy: IfNotPresent
+  api:
+    repository: ponctuel-api
+    tag: "0.3.0"
+  ingester:
+    repository: ponctuel-ingester
+    tag: "0.3.0"
+  matcher:
+    repository: ponctuel-matcher
+    tag: "0.3.0"
+  web:
+    repository: ponctuel-web
+    tag: "0.3.0"
+
+database:
+  password: change-this-development-password
+
+secrets:
+  stmApiKey: ""

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ponctuel.configMapName" . }}
+  labels:
+    {{- include "ponctuel.labels" . | nindent 4 }}
+data:
+  APP_ENV: {{ .Values.config.appEnv | quote }}
+  POLL_INTERVAL: {{ .Values.config.pollInterval | quote }}
+  FRESHNESS_WINDOW: {{ .Values.config.freshnessWindow | quote }}
+  GEOFENCE_RADIUS_METERS: {{ .Values.config.geofenceRadiusMeters | quote }}
+  API_ALLOWED_ORIGINS: {{ .Values.config.apiAllowedOrigins | quote }}
+  STM_TRIP_UPDATES_URL: {{ .Values.config.stmTripUpdatesURL | quote }}
+  STM_VEHICLE_POSITIONS_URL: {{ .Values.config.stmVehiclePositionsURL | quote }}
+  STM_API_KEY_HEADER: {{ .Values.config.stmApiKeyHeader | quote }}
+  REDPANDA_BROKERS: {{ printf "%s-redpanda:%d" (include "ponctuel.fullname" .) (int .Values.redpanda.servicePort) | quote }}
+  REDPANDA_GROUP_ID: {{ .Values.config.redpandaGroupID | quote }}
+  TRIP_UPDATES_TOPIC: {{ .Values.config.topics.tripUpdates | quote }}
+  VEHICLE_POSITIONS_TOPIC: {{ .Values.config.topics.vehiclePositions | quote }}

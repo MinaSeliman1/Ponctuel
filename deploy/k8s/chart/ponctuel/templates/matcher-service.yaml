@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ponctuel.fullname" . }}-matcher
+  labels:
+    {{- include "ponctuel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: matcher
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8082
+      targetPort: http
+  selector:
+    {{- include "ponctuel.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: matcher
