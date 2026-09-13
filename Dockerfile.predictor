@@ -1,0 +1,23 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PREDICTOR_MODEL_PATH=/app/model/model.joblib
+
+WORKDIR /app
+
+COPY services/predictor/requirements.txt /app/services/predictor/requirements.txt
+RUN pip install --no-cache-dir -r /app/services/predictor/requirements.txt \
+    && useradd --create-home --uid 10001 --shell /usr/sbin/nologin ponctuel
+
+COPY services/predictor /app/services/predictor
+RUN mkdir -p /app/model \
+    && chown -R ponctuel:ponctuel /app
+
+USER ponctuel
+EXPOSE 8090
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/healthz', timeout=2)"
+
+CMD ["uvicorn", "services.predictor.app:app", "--host", "0.0.0.0", "--port", "8090"]

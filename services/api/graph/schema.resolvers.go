@@ -79,6 +79,41 @@ func (r *queryResolver) Vehicles(ctx context.Context, limit *int) ([]*model.Vehi
 	return result, nil
 }
 
+// ErrorSummary is the resolver for the errorSummary field.
+func (r *queryResolver) ErrorSummary(ctx context.Context, limit *int) ([]*model.ErrorSummary, error) {
+	if r.repository == nil {
+		return nil, fmt.Errorf("error summary data unavailable")
+	}
+	requestedLimit := 100
+	if limit != nil {
+		requestedLimit = *limit
+	}
+	if requestedLimit < 0 {
+		return nil, fmt.Errorf("error summary limit must not be negative")
+	}
+	if requestedLimit > 500 {
+		requestedLimit = 500
+	}
+	summaries, err := r.repository.ErrorSummary(ctx, requestedLimit)
+	if err != nil {
+		return nil, fmt.Errorf("error summary data unavailable")
+	}
+	if len(summaries) > requestedLimit {
+		summaries = summaries[:requestedLimit]
+	}
+	result := make([]*model.ErrorSummary, 0, len(summaries))
+	for _, summary := range summaries {
+		result = append(result, &model.ErrorSummary{
+			RouteID:          optionalString(summary.RouteID),
+			HorizonSeconds:   summary.HorizonSeconds,
+			SampleCount:      int(summary.SampleCount),
+			MeanErrorSeconds: summary.MeanErrorSeconds,
+			OnTimeRate:       summary.OnTimeRate,
+		})
+	}
+	return result, nil
+}
+
 func optionalString(value string) *string {
 	if value == "" {
 		return nil

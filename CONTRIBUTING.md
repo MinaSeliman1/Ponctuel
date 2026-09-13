@@ -19,6 +19,8 @@ npm --prefix web ci
 npm --prefix web run test -- --run
 npm --prefix web run typecheck
 npm --prefix web run build
+python -m pip install --requirement services/predictor/requirements.txt
+python -m pytest services/predictor -q
 helm lint deploy/k8s/chart/ponctuel
 helm template ponctuel deploy/k8s/chart/ponctuel
 ```

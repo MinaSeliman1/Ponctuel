@@ -92,3 +92,6 @@ func (r *healthRepository) InsertArrival(context.Context, domain.ArrivalObserved
 	return false, nil
 }
 func (r *healthRepository) LatestStops(context.Context) ([]domain.Stop, error) { return nil, nil }
+func (r *healthRepository) ErrorSummary(context.Context, int) ([]domain.ErrorSummary, error) {
+	return nil, nil
+}

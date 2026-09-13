@@ -13,6 +13,14 @@ type Dashboard struct {
 	Stale           bool       `json:"stale"`
 }
 
+type ErrorSummary struct {
+	RouteID          *string `json:"routeId,omitempty"`
+	HorizonSeconds   int     `json:"horizonSeconds"`
+	SampleCount      int     `json:"sampleCount"`
+	MeanErrorSeconds float64 `json:"meanErrorSeconds"`
+	OnTimeRate       float64 `json:"onTimeRate"`
+}
+
 type Query struct {
 }
 
