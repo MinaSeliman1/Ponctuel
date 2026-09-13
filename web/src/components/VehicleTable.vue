@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import type { Vehicle } from '../types'
 
 type DelayFilter = 'all' | 'on-time' | 'late'
@@ -12,6 +12,8 @@ const props = defineProps<{
 
 const search = ref('')
 const filtersOpen = ref(false)
+const filtersTrigger = ref<HTMLButtonElement | null>(null)
+const filtersPanel = ref<HTMLDivElement | null>(null)
 const selectedRoute = ref('')
 const selectedDelay = ref<DelayFilter>('all')
 const currentPage = ref(1)
@@ -64,6 +66,28 @@ function resetFilters(): void {
   currentPage.value = 1
 }
 
+function focusFiltersContent(): void {
+  void nextTick(() => filtersPanel.value?.querySelector<HTMLSelectElement | HTMLButtonElement>('select, button')?.focus())
+}
+
+function openFilters(): void {
+  filtersOpen.value = true
+  focusFiltersContent()
+}
+
+function closeFilters(): void {
+  filtersOpen.value = false
+  void nextTick(() => filtersTrigger.value?.focus())
+}
+
+function toggleFilters(): void {
+  if (filtersOpen.value) {
+    closeFilters()
+  } else {
+    openFilters()
+  }
+}
+
 function formatDelay(seconds: number | null): string {
   if (seconds === null) return '—'
   const minutes = Math.round(seconds / 60)
@@ -96,17 +120,18 @@ function formatTime(value: string): string {
       </label>
       <div class="filter-menu">
         <button
+          ref="filtersTrigger"
           class="filter-button"
           type="button"
           aria-controls="vehicle-filters"
           :aria-expanded="filtersOpen"
           :aria-label="`Filtres actifs : ${activeFilterCount}`"
-          @click="filtersOpen = !filtersOpen"
+          @click="toggleFilters"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4" /></svg>
           Filtres <span class="filter-count">{{ activeFilterCount }}</span>
         </button>
-        <div v-if="filtersOpen" id="vehicle-filters" class="filter-panel" aria-label="Filtres des véhicules">
+        <div v-if="filtersOpen" ref="filtersPanel" id="vehicle-filters" class="filter-panel" role="region" aria-label="Filtres des véhicules" tabindex="-1" @keydown.esc.stop="closeFilters">
           <label class="filter-field" for="route-filter">
             <span>Ligne</span>
             <select id="route-filter" v-model="selectedRoute">
@@ -124,7 +149,7 @@ function formatTime(value: string): string {
           </label>
           <div class="filter-actions">
             <button class="text-button" type="button" @click="resetFilters">Réinitialiser</button>
-            <button class="text-button" type="button" @click="filtersOpen = false">Fermer</button>
+            <button class="text-button" type="button" @click="closeFilters">Fermer</button>
           </div>
         </div>
       </div>
