@@ -167,7 +167,7 @@ git commit -m "ci: run browser e2e checks"
 **Files:**
 - No source changes expected; validate the complete branch.
 
-- [ ] **Step 1: Exécuter les vérifications locales complètes**
+- [x] **Step 1: Exécuter les vérifications locales complètes**
 
 Run:
 
@@ -182,7 +182,7 @@ pwsh -NoProfile -File scripts/smoke.ps1
 
 Expected: chaque commande sort avec le code 0; le smoke test signale au moins un événement et un véhicule fixture.
 
-- [ ] **Step 2: Vérifier sécurité et état Git**
+- [x] **Step 2: Vérifier sécurité et état Git**
 
 Run:
 
@@ -194,7 +194,7 @@ git status --short --branch
 
 La recherche de secret ne doit retourner aucune correspondance et l’arbre ne doit contenir que les changements prévus.
 
-- [ ] **Step 3: Publier la branche et ouvrir la PR**
+- [x] **Step 3: Publier la branche et ouvrir la PR**
 
 ~~~
 git push -u origin jalon-6
