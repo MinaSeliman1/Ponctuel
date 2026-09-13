@@ -1,30 +1,41 @@
-name: Signaler un bug
-description: Décrire un comportement reproductible de Ponctuel.
-title: "[Bug] "
-labels: [bug]
+name: Signaler un problème
+description: Décrire un comportement reproductible à corriger.
+title: "bug: "
+labels:
+  - bug
 body:
-  - type: textarea
-    id: summary
+  - type: markdown
     attributes:
-      label: Résumé
-      description: Que s’est-il passé ?
+      value: |
+        Merci de fournir un exemple minimal et de ne jamais inclure de clé STM,
+        de secret, de payload réel ou de donnée personnelle.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Que s’est-il passé et quel comportement attendiez-vous ?
     validations:
       required: true
   - type: textarea
     id: reproduction
     attributes:
-      label: Reproduction
-      description: Quelles étapes permettent de reproduire le problème ?
+      label: Étapes de reproduction
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
     validations:
       required: true
   - type: input
     id: environment
     attributes:
       label: Environnement
-      placeholder: Windows 11, Docker Desktop, navigateur et commit
+      placeholder: Windows 11, Docker Desktop, commit ou branche
+    validations:
+      required: true
   - type: textarea
     id: logs
     attributes:
-      label: Logs non sensibles
-      description: Ne colle jamais STM_API_KEY ni un payload réel.
-
+      label: Logs ou capture réduite
+      description: Retirez les secrets et données personnelles avant de publier.
+      render: text

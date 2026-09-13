@@ -1,5 +1,8 @@
 # Ponctuel
 
+[![CI](https://github.com/MinaSeliman1/Ponctuel/actions/workflows/ci.yml/badge.svg?branch=jalon-1)](https://github.com/MinaSeliman1/Ponctuel/actions/workflows/ci.yml)
+[![Dépôt public](https://img.shields.io/badge/dépôt-public-2ea44f)](https://github.com/MinaSeliman1/Ponctuel)
+
 Ponctuel mesure l’écart entre les prédictions d’arrivée des autobus de la STM
 et les arrivées observées. Les jalons 1 à 25 fournissent une démonstration
 complète, reproductible et gratuite : ingestion GTFS-Realtime, transport
@@ -133,6 +136,16 @@ Pop-Location
 ```
 
 Le smoke test Compose reste le contrôle d’intégration des services backend.
+
+## Qualité du dépôt public
+
+Chaque modification passe par une pull request et la CI vérifie les tests Go,
+Python et frontend, le typage, le build, les tests navigateur, la configuration
+Docker Compose, les images Docker, le chart Helm et la recherche de secrets.
+Les dépendances GitHub Actions, Go, npm, Python et les images Docker sont
+surveillées gratuitement par Dependabot. Les modèles d’issues et de pull
+requests sont disponibles dans `.github/` pour garder les contributions
+reproductibles.
 
 Pour les détails Compose, voir [deploy/compose/README.md](deploy/compose/README.md).
 Les règles de contribution et de sécurité sont dans
