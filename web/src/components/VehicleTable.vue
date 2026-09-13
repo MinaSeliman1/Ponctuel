@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import type { Vehicle } from '../types'
 import { downloadCsv, vehiclesToCsv } from '../utils/csv'
-import { copyVehicleFiltersLink, readVehicleFilters, syncVehicleFiltersToUrl, type DelayFilter } from '../utils/vehicleFilters'
+import { copyVehicleFiltersLink, readVehicleFilters, syncVehicleFiltersToUrl, type DelayFilter, type VehicleSort } from '../utils/vehicleFilters'
 
 const props = defineProps<{
   vehicles: Vehicle[]
@@ -20,8 +20,7 @@ const selectedDelay = ref<DelayFilter>(initialFilters.delay)
 const currentPage = ref(1)
 const pageSize = 10
 const copyStatus = ref<'idle' | 'success' | 'error'>('idle')
-type VehicleSort = 'arrival' | 'route' | 'vehicle' | 'delay'
-const sortBy = ref<VehicleSort>('arrival')
+const sortBy = ref<VehicleSort>(initialFilters.sort ?? 'arrival')
 
 const routeOptions = computed(() => Array.from(new Set(
   props.vehicles
@@ -88,13 +87,10 @@ const activeFilterChips = computed(() => {
   return chips
 })
 
-watch([search, selectedRoute, selectedDelay], () => {
+watch([search, selectedRoute, selectedDelay, sortBy], () => {
   currentPage.value = 1
   copyStatus.value = 'idle'
-  syncVehicleFiltersToUrl({ search: search.value, route: selectedRoute.value, delay: selectedDelay.value })
-})
-watch(sortBy, () => {
-  currentPage.value = 1
+  syncVehicleFiltersToUrl({ search: search.value, route: selectedRoute.value, delay: selectedDelay.value, sort: sortBy.value })
 })
 watch(pageCount, (count) => {
   if (currentPage.value > count) currentPage.value = count
@@ -154,7 +150,7 @@ function exportVehicles(): void {
 
 async function copyShareableLink(): Promise<void> {
   try {
-    await copyVehicleFiltersLink({ search: search.value, route: selectedRoute.value, delay: selectedDelay.value })
+    await copyVehicleFiltersLink({ search: search.value, route: selectedRoute.value, delay: selectedDelay.value, sort: sortBy.value })
     copyStatus.value = 'success'
   } catch {
     copyStatus.value = 'error'

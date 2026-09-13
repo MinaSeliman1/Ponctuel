@@ -223,16 +223,17 @@ test('restaure et partage les filtres depuis l’URL', async ({ page }) => {
     { ...vehicles[0], vehicleId: '9988', routeId: '80', tripId: 'trip-80', delaySeconds: 360 },
   ]
   await routeDashboard(page, { vehicles: fleet })
-  await page.goto('/?route=80&delay=late')
+  await page.goto('/?route=80&delay=late&sort=delay')
 
   await expect(page.getByText('9988', { exact: true })).toBeVisible()
   await expect(page.getByText('1234', { exact: true })).not.toBeVisible()
   await page.getByRole('button', { name: 'Filtres actifs : 2' }).click()
   await expect(page.getByRole('combobox', { name: 'Ligne', exact: true })).toHaveValue('80')
   await expect(page.getByRole('combobox', { name: 'Retard', exact: true })).toHaveValue('late')
+  await expect(page.getByRole('combobox', { name: 'Trier', exact: true })).toHaveValue('delay')
 
   await page.locator('input[type="search"]').fill('9988')
-  await expect(page).toHaveURL(/q=9988&route=80&delay=late/)
+  await expect(page).toHaveURL(/q=9988&route=80&delay=late&sort=delay/)
 })
 
 test('copie le lien absolu des filtres actifs', async ({ page }) => {
@@ -247,12 +248,12 @@ test('copie le lien absolu des filtres actifs', async ({ page }) => {
     })
   })
   await routeDashboard(page, { vehicles: [vehicles[0], { ...vehicles[0], vehicleId: '9988', routeId: '80', delaySeconds: 360 }] })
-  await page.goto('/?route=80&delay=late')
+  await page.goto('/?route=80&delay=late&sort=delay')
 
   await page.getByRole('button', { name: 'Copier le lien des filtres' }).click()
   await expect(page.getByRole('status')).toContainText('Le lien des filtres a été copié.')
   await expect.poll(() => page.evaluate(() => (window as Window & { __copiedVehicleLink?: string }).__copiedVehicleLink))
-    .toBe('http://127.0.0.1:4173/?route=80&delay=late')
+    .toBe('http://127.0.0.1:4173/?route=80&delay=late&sort=delay')
 })
 
 test('supprime les filtres actifs depuis le résumé visible', async ({ page }) => {
