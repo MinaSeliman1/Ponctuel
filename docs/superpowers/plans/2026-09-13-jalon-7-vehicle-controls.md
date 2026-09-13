@@ -46,5 +46,5 @@
 
 - [x] Exécuter tests, typecheck, build, E2E, `scripts/check.ps1` et smoke.
 - [x] Vérifier `git diff --check`, le scan de secrets et un arbre propre.
-- [ ] Commiter sur `jalon-7`, pousser la branche et ouvrir une PR vers `jalon-6`.
-- [ ] Attendre une CI verte sans fusion automatique.
+- [x] Commiter sur `jalon-7`, pousser la branche et ouvrir une PR vers `jalon-6`.
+- [x] Attendre une CI verte sans fusion automatique.
