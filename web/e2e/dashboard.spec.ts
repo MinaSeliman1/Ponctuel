@@ -82,6 +82,23 @@ test('affiche le dashboard réseau et la qualité dans Chromium', async ({ page 
   await expect(page.getByText('Temps réel', { exact: true })).toBeVisible()
 })
 
+test('ouvre les détails d’un autobus depuis la carte au clavier', async ({ page }) => {
+  await routeDashboard(page)
+  await page.goto('/')
+
+  const marker = page.getByRole('button', { name: 'Autobus 1234', exact: true })
+  await expect(marker).toHaveAttribute('tabindex', '0')
+  await marker.focus()
+  await page.keyboard.press('Enter')
+
+  await expect(page.getByRole('dialog')).toContainText('Autobus 1234')
+  await expect(page.getByRole('dialog')).toContainText('trip-51')
+  await expect(marker).toHaveAttribute('aria-pressed', 'true')
+
+  await page.getByRole('button', { name: 'Fermer le détail de l’autobus 1234' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
 test('conserve les véhicules quand la qualité est indisponible', async ({ page }) => {
   await routeDashboard(page, { qualityUnavailable: true })
   await page.goto('/')
