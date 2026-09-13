@@ -25,11 +25,13 @@ const errorSummary = [
 ]
 
 async function routeDashboard(page: Page, options: { qualityUnavailable?: boolean; vehicles?: typeof vehicles } = {}) {
+  const requestCounts = { dashboard: 0, vehicles: 0, quality: 0 }
   await page.route('**/query', async (route) => {
     const payload = route.request().postDataJSON() as { query?: string }
     const query = payload.query ?? ''
 
     if (query.includes('ErrorSummary')) {
+      requestCounts.quality += 1
       if (options.qualityUnavailable) {
         await route.fulfill({ status: 503, body: 'unavailable' })
         return
@@ -43,6 +45,7 @@ async function routeDashboard(page: Page, options: { qualityUnavailable?: boolea
     }
 
     if (query.includes('Vehicles')) {
+      requestCounts.vehicles += 1
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -52,6 +55,7 @@ async function routeDashboard(page: Page, options: { qualityUnavailable?: boolea
     }
 
     if (query.includes('Dashboard')) {
+      requestCounts.dashboard += 1
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -62,6 +66,7 @@ async function routeDashboard(page: Page, options: { qualityUnavailable?: boolea
 
     await route.abort()
   })
+  return requestCounts
 }
 
 test('affiche le dashboard réseau et la qualité dans Chromium', async ({ page }) => {
@@ -112,4 +117,18 @@ test('filtre et pagine les véhicules depuis le navigateur', async ({ page }) =>
   await page.getByRole('button', { name: 'Page suivante' }).click()
   await expect(page.getByText('Page 2 sur 2')).toBeVisible()
   await expect(page.getByText('9988', { exact: true })).toBeVisible()
+})
+
+test('actualise les données depuis le navigateur', async ({ page }) => {
+  const requestCounts = await routeDashboard(page)
+  await page.goto('/')
+
+  await expect.poll(() => requestCounts.dashboard).toBe(1)
+  await expect(page.getByRole('button', { name: 'Actualiser les données' })).toBeEnabled()
+
+  await page.getByRole('button', { name: 'Actualiser les données' }).click()
+  await expect.poll(() => requestCounts.dashboard).toBe(2)
+  await expect.poll(() => requestCounts.vehicles).toBe(2)
+  await expect.poll(() => requestCounts.quality).toBe(2)
+  await expect(page.getByText('1234', { exact: true })).toBeVisible()
 })

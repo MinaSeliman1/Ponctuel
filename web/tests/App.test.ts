@@ -77,4 +77,19 @@ describe('App prediction quality integration', () => {
 
     expect(wrapper.text()).toContain('Pas encore assez d’observations correspondantes')
   })
+
+  it('refreshes the three dashboard queries without losing the network view', async () => {
+    const fetchSpy = mockApi()
+    const wrapper = mount(App)
+
+    await flushPromises()
+    expect(fetchSpy).toHaveBeenCalledTimes(3)
+
+    await wrapper.get('button[aria-label="Actualiser les données"]').trigger('click')
+    await flushPromises()
+
+    expect(fetchSpy).toHaveBeenCalledTimes(6)
+    expect(wrapper.text()).toContain('1234')
+    wrapper.unmount()
+  })
 })
