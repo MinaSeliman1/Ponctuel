@@ -31,8 +31,14 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(28, 104, 204
 .brand-context { color: #51617a; font-size: 16px; font-weight: 520; }
 .topbar-actions { gap: 20px; }
 .live-clock { color: var(--muted); font-size: 13px; }
+.preferences-wrap { position: relative; }
 .icon-button { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; color: var(--ink); background: transparent; }
 .icon-button svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.preferences-panel { position: absolute; z-index: 10; top: calc(100% + 9px); right: 0; display: grid; gap: 12px; width: 270px; padding: 16px; border: 1px solid var(--line); border-radius: 9px; background: #fff; box-shadow: 0 14px 30px rgba(20, 35, 63, .14); }
+.preferences-panel h2 { margin: 0; color: var(--ink); font-size: 15px; }
+.preference-toggle { display: flex; align-items: center; gap: 9px; color: var(--ink); font-size: 12px; font-weight: 650; }
+.preference-toggle input { width: 16px; height: 16px; accent-color: #1765b1; }
+.preferences-panel p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
 
 .main-content { max-width: 1440px; margin: 0 auto; padding: 28px 30px 20px; }
 .status-panel { display: grid; grid-template-columns: 1.7fr 1fr 1fr; min-height: 105px; border-bottom: 1px solid var(--line); }

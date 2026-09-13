@@ -1,7 +1,7 @@
 # Ponctuel
 
 Ponctuel mesure l’écart entre les prédictions d’arrivée des autobus de la STM
-et les arrivées observées. Les jalons 1 à 8 fournissent une démonstration
+et les arrivées observées. Les jalons 1 à 9 fournissent une démonstration
 complète, reproductible et gratuite : ingestion GTFS-Realtime, transport
 Redpanda, matcher d’arrivée, mesure d’erreur TimescaleDB, API GraphQL,
 predictor Python optionnel et dashboard Vue.
@@ -62,6 +62,8 @@ GTFS-Realtime fixture ou STM
   par ligne et par retard, ainsi qu’une pagination locale accessible.
 - Le dashboard propose un rafraîchissement manuel et automatique toutes les
   30 secondes; les données existantes restent visibles pendant la relance.
+- Les préférences permettent de suspendre l’actualisation automatique sans
+  désactiver le bouton de rafraîchissement manuel.
 
 ## Mesure et predictor
 
@@ -135,7 +137,7 @@ l’attribution et les conditions d’utilisation officielles STM.
 
 ## Statut du projet
 
-Les jalons 1 à 8 sont prêts pour une démonstration locale, un déploiement k3s
+Les jalons 1 à 9 sont prêts pour une démonstration locale, un déploiement k3s
 documenté et un portfolio public. La démonstration complète reste locale et
 gratuite. Le projet ne
 prétend pas être un service de production : authentification, haute

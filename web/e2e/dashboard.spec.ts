@@ -132,3 +132,21 @@ test('actualise les données depuis le navigateur', async ({ page }) => {
   await expect.poll(() => requestCounts.quality).toBe(2)
   await expect(page.getByText('1234', { exact: true })).toBeVisible()
 })
+
+test('permet de suspendre le rafraîchissement automatique', async ({ page }) => {
+  const requestCounts = await routeDashboard(page)
+  await page.goto('/')
+
+  await page.getByRole('button', { name: 'Préférences' }).click()
+  await expect(page.getByRole('dialog', { name: 'Préférences' })).toBeVisible()
+  const autoRefresh = page.getByRole('checkbox', { name: 'Actualisation automatique' })
+  await expect(autoRefresh).toBeChecked()
+  await autoRefresh.uncheck()
+
+  await expect(page.getByText('Actualisation automatique suspendue')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Actualiser les données' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Actualiser les données' }).click()
+  await expect.poll(() => requestCounts.dashboard).toBe(2)
+  await expect.poll(() => requestCounts.vehicles).toBe(2)
+  await expect.poll(() => requestCounts.quality).toBe(2)
+})
