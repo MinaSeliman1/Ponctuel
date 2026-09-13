@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { fetchDashboard, fetchErrorSummary, fetchVehicles } from './api/client'
 import ErrorQualityChart from './components/ErrorQualityChart.vue'
 import StatusPanel from './components/StatusPanel.vue'
@@ -16,6 +16,8 @@ const qualityError = ref(false)
 const isRefreshing = ref(false)
 const preferencesOpen = ref(false)
 const autoRefreshEnabled = ref(true)
+const preferencesTrigger = ref<HTMLButtonElement | null>(null)
+const preferencesPanel = ref<HTMLDivElement | null>(null)
 let controller: AbortController | null = null
 let refreshTimer: number | undefined
 const refreshIntervalMs = 30_000
@@ -82,6 +84,28 @@ function scheduleRefresh(): void {
   }
 }
 
+function focusPreferencesContent(): void {
+  void nextTick(() => preferencesPanel.value?.querySelector<HTMLInputElement | HTMLButtonElement>('input, button')?.focus())
+}
+
+function openPreferences(): void {
+  preferencesOpen.value = true
+  focusPreferencesContent()
+}
+
+function closePreferences(): void {
+  preferencesOpen.value = false
+  void nextTick(() => preferencesTrigger.value?.focus())
+}
+
+function togglePreferences(): void {
+  if (preferencesOpen.value) {
+    closePreferences()
+  } else {
+    openPreferences()
+  }
+}
+
 watch(autoRefreshEnabled, scheduleRefresh)
 
 onMounted(() => {
@@ -101,18 +125,18 @@ onUnmounted(() => {
       <div class="topbar-actions">
         <span class="live-clock">Suivi des positions</span>
         <div class="preferences-wrap">
-          <button class="icon-button" type="button" aria-label="Préférences" aria-controls="preferences-panel" :aria-expanded="preferencesOpen" aria-haspopup="dialog" @click="preferencesOpen = !preferencesOpen">
+          <button ref="preferencesTrigger" class="icon-button" type="button" aria-label="Préférences" aria-controls="preferences-panel" :aria-expanded="preferencesOpen" aria-haspopup="dialog" @click="togglePreferences">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3m0 14v3M2 12h3m14 0h3m-4.9-7.1-2.1 2.1m-10 10-2.1 2.1m0-14.2 2.1 2.1m10 10 2.1 2.1" /></svg>
           </button>
-          <div v-if="preferencesOpen" id="preferences-panel" class="preferences-panel" role="dialog" aria-labelledby="preferences-title">
+          <div v-if="preferencesOpen" ref="preferencesPanel" id="preferences-panel" class="preferences-panel" role="dialog" aria-labelledby="preferences-title" aria-describedby="preferences-description" tabindex="-1" @keydown.esc.stop="closePreferences">
             <h2 id="preferences-title">Préférences</h2>
             <label class="preference-toggle">
               <input v-model="autoRefreshEnabled" type="checkbox" />
               <span>Actualisation automatique</span>
             </label>
-            <p v-if="autoRefreshEnabled">Les données sont rafraîchies toutes les 30 secondes.</p>
-            <p v-else>Actualisation automatique suspendue. Le bouton Actualiser reste disponible.</p>
-            <button class="text-button" type="button" @click="preferencesOpen = false">Fermer</button>
+            <p id="preferences-description" v-if="autoRefreshEnabled">Les données sont rafraîchies toutes les 30 secondes.</p>
+            <p id="preferences-description" v-else>Actualisation automatique suspendue. Le bouton Actualiser reste disponible.</p>
+            <button class="text-button" type="button" @click="closePreferences">Fermer</button>
           </div>
         </div>
       </div>

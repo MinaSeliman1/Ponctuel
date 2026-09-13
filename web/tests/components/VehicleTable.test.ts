@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import VehicleTable from '../../src/components/VehicleTable.vue'
 
 function vehicle(index: number, routeId = '51', delaySeconds: number | null = 30) {
@@ -88,5 +89,24 @@ describe('VehicleTable', () => {
     expect(wrapper.find('tbody').text()).toContain('bus-11')
     expect(wrapper.find('.page-label').text()).toBe('Page 2 sur 2')
     expect(wrapper.get('button[aria-label="Page suivante"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('focuses the first filter and restores focus after Escape', async () => {
+    const wrapper = mount(VehicleTable, {
+      attachTo: document.body,
+      props: { vehicles: [vehicle(1)], isLoading: false, error: null },
+    })
+    const filtersButton = wrapper.get('button[aria-label="Filtres actifs : 0"]')
+
+    await filtersButton.trigger('click')
+    await nextTick()
+    expect(document.activeElement).toBe(wrapper.get('#route-filter').element)
+
+    await wrapper.get('#route-filter').trigger('keydown', { key: 'Escape' })
+    await nextTick()
+
+    expect(wrapper.find('#vehicle-filters').exists()).toBe(false)
+    expect(document.activeElement).toBe(filtersButton.element)
+    wrapper.unmount()
   })
 })

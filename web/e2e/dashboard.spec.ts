@@ -150,3 +150,24 @@ test('permet de suspendre le rafraîchissement automatique', async ({ page }) =>
   await expect.poll(() => requestCounts.vehicles).toBe(2)
   await expect.poll(() => requestCounts.quality).toBe(2)
 })
+
+test('gère les panneaux flottants au clavier', async ({ page }) => {
+  await routeDashboard(page)
+  await page.goto('/')
+
+  const preferencesButton = page.getByRole('button', { name: 'Préférences' })
+  await preferencesButton.click()
+  const autoRefresh = page.getByRole('checkbox', { name: 'Actualisation automatique' })
+  await expect(autoRefresh).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog', { name: 'Préférences' })).toBeHidden()
+  await expect(preferencesButton).toBeFocused()
+
+  const filtersButton = page.getByRole('button', { name: 'Filtres actifs : 0' })
+  await filtersButton.click()
+  const routeFilter = page.getByRole('combobox', { name: 'Ligne', exact: true })
+  await expect(routeFilter).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('#vehicle-filters')).toBeHidden()
+  await expect(filtersButton).toBeFocused()
+})

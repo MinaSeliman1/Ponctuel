@@ -112,4 +112,23 @@ describe('App prediction quality integration', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(6)
     wrapper.unmount()
   })
+
+  it('focuses and closes the preferences dialog from the keyboard', async () => {
+    mockApi()
+    const wrapper = mount(App, { attachTo: document.body })
+
+    await flushPromises()
+    const preferencesButton = wrapper.get('button[aria-label="Préférences"]')
+    await preferencesButton.trigger('click')
+    await flushPromises()
+
+    expect(document.activeElement).toBe(wrapper.get('input[type="checkbox"]').element)
+
+    await wrapper.get('[role="dialog"]').trigger('keydown', { key: 'Escape' })
+    await flushPromises()
+
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+    expect(document.activeElement).toBe(preferencesButton.element)
+    wrapper.unmount()
+  })
 })
