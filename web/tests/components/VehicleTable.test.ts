@@ -1,6 +1,11 @@
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
+import { afterEach } from 'vitest'
 import VehicleTable from '../../src/components/VehicleTable.vue'
+
+afterEach(() => {
+  window.history.replaceState(null, '', '/')
+})
 
 function vehicle(index: number, routeId = '51', delaySeconds: number | null = 30) {
   return {
@@ -123,5 +128,27 @@ describe('VehicleTable', () => {
     expect(exportButton.attributes('disabled')).toBeUndefined()
     await wrapper.get('input[type="search"]').setValue('inexistant')
     expect(wrapper.get('button[aria-label="Exporter les véhicules en CSV"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('restores filters from the URL and updates the shareable state', async () => {
+    window.history.replaceState(null, '', '/?q=bus&route=80&delay=late')
+    const wrapper = mount(VehicleTable, {
+      props: {
+        vehicles: [vehicle(1, '51', 30), vehicle(2, '80', 360)],
+        isLoading: false,
+        error: null,
+      },
+    })
+
+    expect((wrapper.get('input[type="search"]').element as HTMLInputElement).value).toBe('bus')
+    expect(wrapper.find('#route-filter').exists()).toBe(false)
+    await wrapper.get('button[aria-label="Filtres actifs : 2"]').trigger('click')
+    expect((wrapper.get('#route-filter').element as HTMLSelectElement).value).toBe('80')
+    expect((wrapper.get('#delay-filter').element as HTMLSelectElement).value).toBe('late')
+
+    await wrapper.get('input[type="search"]').setValue('9988')
+    await nextTick()
+    expect(window.location.search).toBe('?q=9988&route=80&delay=late')
+    wrapper.unmount()
   })
 })
