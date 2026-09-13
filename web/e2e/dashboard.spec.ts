@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
 
 const dashboard = {
@@ -170,4 +171,27 @@ test('gère les panneaux flottants au clavier', async ({ page }) => {
   await page.keyboard.press('Escape')
   await expect(page.locator('#vehicle-filters')).toBeHidden()
   await expect(filtersButton).toBeFocused()
+})
+
+test('télécharge un CSV limité aux véhicules filtrés', async ({ page }) => {
+  const fleet = [
+    vehicles[0],
+    { ...vehicles[0], vehicleId: '9988', routeId: '80', tripId: 'trip-80' },
+  ]
+  await routeDashboard(page, { vehicles: fleet })
+  await page.goto('/')
+
+  await page.getByRole('button', { name: 'Filtres actifs : 0' }).click()
+  await page.getByRole('combobox', { name: 'Ligne', exact: true }).selectOption('80')
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Exporter les véhicules en CSV' }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toMatch(/^ponctuel-vehicules-[0-9TZ]+\.csv$/)
+  const downloadPath = await download.path()
+  expect(downloadPath).not.toBeNull()
+  const content = await readFile(downloadPath!, 'utf8')
+
+  expect(content).toContain('80,9988,trip-80')
+  expect(content).not.toContain('51,1234,trip-51')
 })
