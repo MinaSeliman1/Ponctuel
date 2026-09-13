@@ -46,7 +46,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(28, 104, 204
 .status-muted, .metric-placeholder { color: var(--faint); }
 .status-error { color: var(--red); font-size: 16px; }
 .status-detail { margin: 0; color: var(--faint); font-size: 13px; }
-.text-button { margin-top: 7px; padding: 0; border: 0; color: #1765b1; background: none; font-size: 13px; font-weight: 700; }
+.refresh-actions { display: flex; align-items: center; gap: 12px; margin-top: 7px; }
+.text-button { padding: 0; border: 0; color: #1765b1; background: none; font-size: 13px; font-weight: 700; }
+.text-button:disabled { color: var(--faint); cursor: wait; }
+.refresh-status { color: var(--muted); font-size: 12px; }
 .status-metric strong { display: block; margin-top: 11px; font-size: 34px; line-height: 1; letter-spacing: -1.5px; }
 .status-metric-wide { padding-right: 0; }
 .mode-select { justify-content: space-between; width: min(100%, 250px); margin-top: 11px; padding: 10px 12px; border: 1px solid #bfe0d8; border-radius: 8px; color: #385770; background: #edf8f5; font-size: 13px; font-weight: 650; }

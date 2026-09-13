@@ -13,15 +13,25 @@ const errorSummaries = ref<ErrorSummary[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const qualityError = ref(false)
+const isRefreshing = ref(false)
 let controller: AbortController | null = null
+let refreshTimer: number | undefined
+const refreshIntervalMs = 30_000
 
 const modeLabel = computed(() => dashboard.value?.mode.toLowerCase() === 'stm' ? 'Temps réel' : 'Fixture local')
 
 async function loadData() {
+  if (controller !== null && (isLoading.value || isRefreshing.value)) return
+
+  const hasExistingData = dashboard.value !== null || vehicles.value.length > 0 || errorSummaries.value.length > 0
   controller?.abort()
   const currentController = new AbortController()
   controller = currentController
-  isLoading.value = true
+  if (hasExistingData) {
+    isRefreshing.value = true
+  } else {
+    isLoading.value = true
+  }
   error.value = null
   qualityError.value = false
   errorSummaries.value = []
@@ -52,11 +62,18 @@ async function loadData() {
 
   if (controller === currentController) {
     isLoading.value = false
+    isRefreshing.value = false
   }
 }
 
-onMounted(loadData)
-onUnmounted(() => controller?.abort())
+onMounted(() => {
+  void loadData()
+  refreshTimer = window.setInterval(() => void loadData(), refreshIntervalMs)
+})
+onUnmounted(() => {
+  controller?.abort()
+  if (refreshTimer !== undefined) window.clearInterval(refreshTimer)
+})
 </script>
 
 <template>
@@ -66,7 +83,7 @@ onUnmounted(() => controller?.abort())
       <div class="topbar-actions"><span class="live-clock">Suivi des positions</span><button class="icon-button" type="button" aria-label="Préférences"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.8 1.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.1h-2.6v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-1.8-1.8.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H6.4v-2.6h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 1.8-1.8.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V4.4H15v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.8 1.8-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1V13h-.1a1.7 1.7 0 0 0-1.5 1Z" /></svg></button></div>
     </header>
     <main class="main-content">
-      <StatusPanel :dashboard="dashboard" :is-loading="isLoading" :error="error" @refresh="loadData" />
+      <StatusPanel :dashboard="dashboard" :is-loading="isLoading" :is-refreshing="isRefreshing" :error="error" @refresh="loadData" />
       <div class="content-heading"><div><span class="eyebrow">Réseau en direct</span><h1>Les autobus, au bon moment.</h1></div><span class="mode-summary"><span class="mode-dot"></span>{{ modeLabel }}</span></div>
       <VehicleMap :vehicles="vehicles" :is-loading="isLoading" />
       <ErrorQualityChart :summaries="errorSummaries" :is-loading="isLoading" :has-error="qualityError" :stale="dashboard?.stale ?? false" />
