@@ -28,6 +28,23 @@ L’API expose les agrégats par ligne et horizon avec :
 `sampleCount` accompagne chaque moyenne et chaque taux afin d’éviter de lire
 un pourcentage sans connaître sa base statistique.
 
+## Affichage dans le dashboard
+
+Le panneau « Qualité des prédictions » consomme ces résumés et les regroupe par
+`horizonSeconds`. Les lignes d’un même horizon sont combinées avec une moyenne
+pondérée :
+
+```text
+erreur_horizon = Σ(meanErrorSeconds × sampleCount) / Σ(sampleCount)
+taux_horizon   = Σ(onTimeRate × sampleCount) / Σ(sampleCount)
+```
+
+Le graphique SVG est accompagné d’un tableau HTML qui reprend l’horizon,
+l’erreur moyenne, le taux « à l’heure » et le nombre d’observations. Lorsque
+l’API est indisponible, le panneau affiche son propre état d’erreur et laisse
+la carte et la liste des véhicules fonctionner. Lorsqu’il n’y a encore aucune
+observation correspondante, il affiche un état vide explicite.
+
 ## Predictor
 
 Le service `services/predictor` est volontairement indépendant de PostgreSQL,

@@ -1,7 +1,7 @@
 # Ponctuel
 
 Ponctuel mesure l’écart entre les prédictions d’arrivée des autobus de la STM
-et les arrivées observées. Les jalons 1 à 4 fournissent une démonstration
+et les arrivées observées. Les jalons 1 à 5 fournissent une démonstration
 complète, reproductible et gratuite : ingestion GTFS-Realtime, transport
 Redpanda, matcher d’arrivée, mesure d’erreur TimescaleDB, API GraphQL,
 predictor Python optionnel et dashboard Vue.
@@ -54,8 +54,11 @@ GTFS-Realtime fixture ou STM
 - `services/api` expose uniquement les champs nécessaires au dashboard, avec
   limites de taille, complexité GraphQL, CORS explicite et endpoints de santé.
 - `web` affiche les états chargement, erreur, vide, données vieillissantes et
-  succès. La carte est un SVG schématique déterministe : aucune tuile externe
-  n’est requise pour la démo publique.
+  succès. Le panneau de qualité regroupe les erreurs par horizon avec une
+  moyenne pondérée par le nombre d’observations, puis fournit un tableau
+  textuel en complément du graphique SVG accessible. La carte est un SVG
+  schématique déterministe : aucune tuile externe n’est requise pour la démo
+  publique.
 
 ## Mesure et predictor
 
@@ -66,6 +69,12 @@ temporelle et baseline zéro; il ne lit ni PostgreSQL, ni Redpanda, ni secret
 STM. L’artefact Joblib est fourni séparément par un pipeline d’entraînement et
 n’est pas versionné. La méthode, les limites et les conditions pour publier
 un résultat réel sont documentées dans [docs/resultats.md](docs/resultats.md).
+
+Le dashboard affiche cette mesure dans le panneau « Qualité des prédictions ».
+Chaque horizon regroupe les résumés par ligne en conservant leur `sampleCount`;
+une panne ou une absence de données de qualité ne bloque ni la carte ni la
+liste des véhicules. Les fixtures permettent de vérifier le contrat visuel et
+ne constituent pas une mesure STM.
 
 ## Vérifications locales
 
@@ -111,7 +120,7 @@ l’attribution et les conditions d’utilisation officielles STM.
 
 ## Statut du projet
 
-Les jalons 1 à 4 sont prêts pour une démonstration locale, un déploiement k3s
+Les jalons 1 à 5 sont prêts pour une démonstration locale, un déploiement k3s
 documenté et un portfolio public. La démonstration complète reste locale et
 gratuite. Le projet ne
 prétend pas être un service de production : authentification, haute
