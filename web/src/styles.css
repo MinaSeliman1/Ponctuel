@@ -81,7 +81,18 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(28, 104, 204
 .map-labels text { fill: #4f6580; font-size: 14px; font-weight: 520; }
 .map-labels .city-label { fill: var(--ink); font-size: 22px; font-weight: 750; }
 .map-labels text:last-child { fill: #688498; font-size: 13px; font-style: italic; }
-.vehicle-markers circle { filter: drop-shadow(0 2px 2px rgba(20, 35, 63, .18)); }
+.vehicle-marker { cursor: pointer; outline: none; }
+.vehicle-marker circle { filter: drop-shadow(0 2px 2px rgba(20, 35, 63, .18)); transition: stroke-width .15s ease, filter .15s ease; }
+.vehicle-marker:hover circle, .vehicle-marker:focus circle, .vehicle-marker-selected circle { stroke: #123e70; stroke-width: 5; filter: drop-shadow(0 3px 4px rgba(20, 35, 63, .28)); }
+.vehicle-detail { position: absolute; z-index: 3; top: 14px; right: 14px; width: min(250px, calc(100% - 28px)); padding: 15px 16px 14px; border: 1px solid #c9d8e8; border-radius: 9px; color: var(--ink); background: rgba(255, 255, 255, .97); box-shadow: 0 10px 26px rgba(20, 35, 63, .16); }
+.vehicle-detail-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.vehicle-detail h3 { margin: 4px 0 11px; font-size: 18px; }
+.vehicle-detail-close { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 5px; color: var(--muted); background: transparent; font-size: 22px; line-height: 1; }
+.vehicle-detail-close:hover { color: var(--ink); background: #edf3f8; }
+.vehicle-detail-list { display: grid; gap: 7px; margin: 0; font-size: 12px; }
+.vehicle-detail-list div { display: flex; justify-content: space-between; gap: 12px; }
+.vehicle-detail-list dt { color: var(--muted); }
+.vehicle-detail-list dd { margin: 0; color: var(--ink); font-weight: 650; text-align: right; }
 .north-control rect, .zoom-control rect { fill: rgba(255,255,255,.95); stroke: #dfe5eb; }
 .north-control path { fill: var(--ink); }
 .north-control text { fill: var(--muted); font-size: 11px; font-weight: 700; }

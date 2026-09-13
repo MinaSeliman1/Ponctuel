@@ -1,7 +1,7 @@
 # Ponctuel
 
 Ponctuel mesure l’écart entre les prédictions d’arrivée des autobus de la STM
-et les arrivées observées. Les jalons 1 à 17 fournissent une démonstration
+et les arrivées observées. Les jalons 1 à 18 fournissent une démonstration
 complète, reproductible et gratuite : ingestion GTFS-Realtime, transport
 Redpanda, matcher d’arrivée, mesure d’erreur TimescaleDB, API GraphQL,
 predictor Python optionnel et dashboard Vue.
@@ -79,6 +79,8 @@ GTFS-Realtime fixture ou STM
   ligne, identifiant ou retard décroissant.
 - L’ordre de tri est également restauré et partagé via le paramètre URL `sort`.
 - Le tableau se resynchronise aussi lors des actions retour/avance du navigateur.
+- Les marqueurs de la carte sont sélectionnables à la souris ou au clavier et
+  affichent une fiche accessible avec les détails du véhicule.
 
 ## Mesure et predictor
 
