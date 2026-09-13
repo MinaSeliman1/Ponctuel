@@ -274,6 +274,20 @@ test('permet de suspendre le rafraîchissement automatique', async ({ page }) =>
   await expect.poll(() => requestCounts.quality).toBe(2)
 })
 
+test('met à jour la fraîcheur même lorsque l’auto-refresh est suspendu', async ({ page }) => {
+  await page.clock.install({ time: new Date(dashboard.lastCollectedAt) })
+  await routeDashboard(page)
+  await page.goto('/')
+
+  await expect(page.getByText('À l’instant — données à jour.')).toBeVisible()
+  await page.getByRole('button', { name: 'Préférences' }).click()
+  await page.getByRole('checkbox', { name: 'Actualisation automatique' }).uncheck()
+  await page.getByRole('button', { name: 'Fermer' }).click()
+
+  await page.clock.fastForward(60_000)
+  await expect(page.getByText('Il y a 1 minute.')).toBeVisible()
+})
+
 test('gère les panneaux flottants au clavier', async ({ page }) => {
   await routeDashboard(page)
   await page.goto('/')

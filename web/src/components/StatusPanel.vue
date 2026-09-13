@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue'
 import type { Dashboard } from '../types'
 
 const props = withDefaults(defineProps<{
@@ -11,6 +12,10 @@ const props = withDefaults(defineProps<{
 
 defineEmits<{ refresh: [] }>()
 
+const freshnessNow = ref(Date.now())
+const freshnessIntervalMs = 30_000
+let freshnessTimer: number | undefined
+
 function formatDate(value: string | null): string {
   if (!value) return 'Aucune collecte enregistrée'
   return new Intl.DateTimeFormat('fr-CA', {
@@ -19,9 +24,9 @@ function formatDate(value: string | null): string {
   }).format(new Date(value))
 }
 
-function relativeLabel(value: string | null): string {
+function relativeLabel(value: string | null, now: number): string {
   if (!value) return 'En attente d’une première collecte.'
-  const minutes = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 60000))
+  const minutes = Math.max(0, Math.round((now - new Date(value).getTime()) / 60000))
   if (minutes === 0) return 'À l’instant — données à jour.'
   if (minutes === 1) return 'Il y a 1 minute.'
   return `Il y a ${minutes} minutes.`
@@ -30,6 +35,19 @@ function relativeLabel(value: string | null): string {
 function modeLabel(mode: string): string {
   return mode.toLowerCase() === 'stm' ? 'Temps réel (bus)' : 'Fixture local'
 }
+
+onMounted(() => {
+  freshnessTimer = window.setInterval(() => {
+    freshnessNow.value = Date.now()
+  }, freshnessIntervalMs)
+})
+
+onUnmounted(() => {
+  if (freshnessTimer !== undefined) {
+    window.clearInterval(freshnessTimer)
+    freshnessTimer = undefined
+  }
+})
 </script>
 
 <template>
@@ -46,7 +64,7 @@ function modeLabel(mode: string): string {
     <p v-else-if="props.error" class="status-value status-error">Impossible de charger les données</p>
     <template v-else>
       <p class="status-value">{{ formatDate(props.dashboard?.lastCollectedAt ?? null) }}</p>
-      <p class="status-detail">{{ relativeLabel(props.dashboard?.lastCollectedAt ?? null) }}</p>
+      <p class="status-detail">{{ relativeLabel(props.dashboard?.lastCollectedAt ?? null, freshnessNow) }}</p>
     </template>
     <p v-if="props.refreshError" class="status-detail status-refresh-error" role="alert">
       Actualisation impossible. Les dernières données valides sont conservées. Vous pouvez réessayer.
