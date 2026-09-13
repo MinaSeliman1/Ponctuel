@@ -2,8 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import type { Vehicle } from '../types'
 import { downloadCsv, vehiclesToCsv } from '../utils/csv'
-
-type DelayFilter = 'all' | 'on-time' | 'late'
+import { readVehicleFilters, syncVehicleFiltersToUrl, type DelayFilter } from '../utils/vehicleFilters'
 
 const props = defineProps<{
   vehicles: Vehicle[]
@@ -11,12 +10,13 @@ const props = defineProps<{
   error: string | null
 }>()
 
-const search = ref('')
+const initialFilters = readVehicleFilters()
+const search = ref(initialFilters.search)
 const filtersOpen = ref(false)
 const filtersTrigger = ref<HTMLButtonElement | null>(null)
 const filtersPanel = ref<HTMLDivElement | null>(null)
-const selectedRoute = ref('')
-const selectedDelay = ref<DelayFilter>('all')
+const selectedRoute = ref(initialFilters.route)
+const selectedDelay = ref<DelayFilter>(initialFilters.delay)
 const currentPage = ref(1)
 const pageSize = 10
 
@@ -51,6 +51,7 @@ const activeFilterCount = computed(() => Number(Boolean(selectedRoute.value)) + 
 
 watch([search, selectedRoute, selectedDelay], () => {
   currentPage.value = 1
+  syncVehicleFiltersToUrl({ search: search.value, route: selectedRoute.value, delay: selectedDelay.value })
 })
 watch(pageCount, (count) => {
   if (currentPage.value > count) currentPage.value = count

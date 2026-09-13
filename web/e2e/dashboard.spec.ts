@@ -195,3 +195,21 @@ test('télécharge un CSV limité aux véhicules filtrés', async ({ page }) => 
   expect(content).toContain('80,9988,trip-80')
   expect(content).not.toContain('51,1234,trip-51')
 })
+
+test('restaure et partage les filtres depuis l’URL', async ({ page }) => {
+  const fleet = [
+    vehicles[0],
+    { ...vehicles[0], vehicleId: '9988', routeId: '80', tripId: 'trip-80', delaySeconds: 360 },
+  ]
+  await routeDashboard(page, { vehicles: fleet })
+  await page.goto('/?route=80&delay=late')
+
+  await expect(page.getByText('9988', { exact: true })).toBeVisible()
+  await expect(page.getByText('1234', { exact: true })).not.toBeVisible()
+  await page.getByRole('button', { name: 'Filtres actifs : 2' }).click()
+  await expect(page.getByRole('combobox', { name: 'Ligne', exact: true })).toHaveValue('80')
+  await expect(page.getByRole('combobox', { name: 'Retard', exact: true })).toHaveValue('late')
+
+  await page.locator('input[type="search"]').fill('9988')
+  await expect(page).toHaveURL(/q=9988&route=80&delay=late/)
+})
