@@ -141,6 +141,28 @@ test('trie les véhicules et remet la pagination à zéro', async ({ page }) => 
   await expect(page.getByRole('region', { name: 'Véhicules en service' }).locator('tbody tr').first().getByText('9988', { exact: true })).toBeVisible()
 })
 
+test('restaure les filtres et le tri avec retour navigateur', async ({ page }) => {
+  const fleet = [
+    vehicles[0],
+    { ...vehicles[0], vehicleId: '9988', routeId: '80', tripId: 'trip-80', delaySeconds: 360 },
+  ]
+  await routeDashboard(page, { vehicles: fleet })
+  await page.goto('/')
+
+  await page.evaluate(() => history.pushState(null, '', '/?route=80&sort=delay'))
+  await page.dispatchEvent('body', 'popstate')
+  await expect(page).toHaveURL(/route=80&sort=delay/)
+  await expect(page.getByText('9988', { exact: true })).toBeVisible()
+  await expect(page.getByText('1234', { exact: true })).not.toBeVisible()
+
+  await page.evaluate(() => history.pushState(null, '', '/?route=51'))
+  await page.goBack()
+  await expect(page).toHaveURL(/route=80&sort=delay/)
+  await page.getByRole('button', { name: 'Filtres actifs : 1' }).click()
+  await expect(page.getByRole('combobox', { name: 'Ligne', exact: true })).toHaveValue('80')
+  await expect(page.getByRole('combobox', { name: 'Trier', exact: true })).toHaveValue('delay')
+})
+
 test('actualise les données depuis le navigateur', async ({ page }) => {
   const requestCounts = await routeDashboard(page)
   await page.goto('/')
