@@ -20,6 +20,8 @@ const selectedDelay = ref<DelayFilter>(initialFilters.delay)
 const currentPage = ref(1)
 const pageSize = 10
 const copyStatus = ref<'idle' | 'success' | 'error'>('idle')
+type VehicleSort = 'arrival' | 'route' | 'vehicle' | 'delay'
+const sortBy = ref<VehicleSort>('arrival')
 
 const routeOptions = computed(() => Array.from(new Set(
   props.vehicles
@@ -29,7 +31,7 @@ const routeOptions = computed(() => Array.from(new Set(
 
 const filteredVehicles = computed(() => {
   const term = search.value.trim().toLowerCase()
-  return props.vehicles.filter((vehicle) => {
+  const filtered = props.vehicles.filter((vehicle) => {
     const matchesSearch = !term || [vehicle.routeId, vehicle.vehicleId, vehicle.tripId]
       .some((value) => value?.toLowerCase().includes(term))
     const matchesRoute = !selectedRoute.value || vehicle.routeId === selectedRoute.value
@@ -37,6 +39,20 @@ const filteredVehicles = computed(() => {
       || (selectedDelay.value === 'late' && vehicle.delaySeconds !== null && vehicle.delaySeconds > 120)
       || (selectedDelay.value === 'on-time' && (vehicle.delaySeconds === null || vehicle.delaySeconds <= 120))
     return matchesSearch && matchesRoute && matchesDelay
+  })
+
+  if (sortBy.value === 'arrival') return filtered
+
+  return [...filtered].sort((left, right) => {
+    if (sortBy.value === 'delay') {
+      if (left.delaySeconds === null && right.delaySeconds === null) return 0
+      if (left.delaySeconds === null) return 1
+      if (right.delaySeconds === null) return -1
+      return right.delaySeconds - left.delaySeconds
+    }
+
+    if (sortBy.value === 'route') return compareNullableText(left.routeId, right.routeId)
+    return left.vehicleId.localeCompare(right.vehicleId, 'fr', { numeric: true })
   })
 })
 
@@ -77,6 +93,9 @@ watch([search, selectedRoute, selectedDelay], () => {
   copyStatus.value = 'idle'
   syncVehicleFiltersToUrl({ search: search.value, route: selectedRoute.value, delay: selectedDelay.value })
 })
+watch(sortBy, () => {
+  currentPage.value = 1
+})
 watch(pageCount, (count) => {
   if (currentPage.value > count) currentPage.value = count
 })
@@ -96,6 +115,13 @@ function clearFilter(filter: 'search' | 'route' | 'delay'): void {
   if (filter === 'search') search.value = ''
   if (filter === 'route') selectedRoute.value = ''
   if (filter === 'delay') selectedDelay.value = 'all'
+}
+
+function compareNullableText(left: string | null | undefined, right: string | null | undefined): number {
+  if (!left && !right) return 0
+  if (!left) return 1
+  if (!right) return -1
+  return left.localeCompare(right, 'fr', { numeric: true })
 }
 
 function focusFiltersContent(): void {
@@ -164,6 +190,15 @@ function formatTime(value: string): string {
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 5 5" /></svg>
         <span class="sr-only">Rechercher un véhicule</span>
         <input v-model="search" type="search" placeholder="Rechercher une ligne, un véhicule ou un trajet…" />
+      </label>
+      <label class="sort-field" for="vehicle-sort">
+        <span>Trier</span>
+        <select id="vehicle-sort" v-model="sortBy">
+          <option value="arrival">Ordre d’arrivée</option>
+          <option value="route">Ligne</option>
+          <option value="vehicle">Véhicule</option>
+          <option value="delay">Retard décroissant</option>
+        </select>
       </label>
       <button
         class="export-button"

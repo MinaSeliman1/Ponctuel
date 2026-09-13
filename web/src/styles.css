@@ -123,6 +123,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(28, 104, 204
 .search-field svg, .filter-button svg, .export-button svg, .share-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .search-field input { min-width: 0; width: 100%; border: 0; outline: 0; color: var(--ink); font-size: 12px; }
 .search-field input::placeholder { color: #91a0b3; }
+.sort-field { display: flex; align-items: center; gap: 7px; color: #596981; font-size: 11px; font-weight: 750; white-space: nowrap; }
+.sort-field select { height: 38px; padding: 0 9px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: #fff; font-size: 12px; }
 .export-button { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 12px; border: 1px solid #b9d7d0; border-radius: 8px; color: #16705e; background: #f1faf7; font-size: 12px; font-weight: 700; }
 .export-button:hover:not(:disabled) { border-color: #79b9aa; background: #e5f6f1; }
 .export-button:disabled { border-color: var(--line); color: var(--faint); background: var(--surface); cursor: not-allowed; }
@@ -193,6 +195,8 @@ tbody tr:hover { background: #fafcfd; }
   .vehicles-toolbar { align-items: flex-start; flex-direction: column; }
   .table-actions { width: 100%; }
   .search-field { width: 100%; }
+  .sort-field { flex: 1 1 170px; }
+  .sort-field select { min-width: 0; flex: 1; }
   .export-button, .share-button { flex: 1 0 auto; justify-content: center; }
   .filter-button { flex: 0 0 auto; }
   .filter-panel { right: auto; left: 0; }

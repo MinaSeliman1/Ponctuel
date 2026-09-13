@@ -129,6 +129,28 @@ describe('VehicleTable', () => {
     expect(wrapper.get('button[aria-label="Page suivante"]').attributes('disabled')).toBeDefined()
   })
 
+  it('sorts vehicles naturally and resets pagination when the order changes', async () => {
+    const wrapper = mount(VehicleTable, {
+      props: {
+        vehicles: [vehicle(2, '80', 360), vehicle(10, '51', null), vehicle(1, '2', 30)],
+        isLoading: false,
+        error: null,
+      },
+    })
+    const vehicleIds = () => wrapper.findAll('tbody tr').map((row) => row.find('td:nth-child(2)').text())
+
+    expect(vehicleIds()).toEqual(['bus-2', 'bus-10', 'bus-1'])
+
+    await wrapper.get('#vehicle-sort').setValue('route')
+    expect(vehicleIds()).toEqual(['bus-1', 'bus-10', 'bus-2'])
+
+    await wrapper.get('#vehicle-sort').setValue('vehicle')
+    expect(vehicleIds()).toEqual(['bus-1', 'bus-2', 'bus-10'])
+
+    await wrapper.get('#vehicle-sort').setValue('delay')
+    expect(vehicleIds()).toEqual(['bus-2', 'bus-1', 'bus-10'])
+  })
+
   it('focuses the first filter and restores focus after Escape', async () => {
     const wrapper = mount(VehicleTable, {
       attachTo: document.body,

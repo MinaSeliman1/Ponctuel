@@ -120,6 +120,27 @@ test('filtre et pagine les véhicules depuis le navigateur', async ({ page }) =>
   await expect(page.getByText('9988', { exact: true })).toBeVisible()
 })
 
+test('trie les véhicules et remet la pagination à zéro', async ({ page }) => {
+  const fleet = [
+    ...vehicles,
+    ...Array.from({ length: 9 }, (_, index) => ({
+      ...vehicles[0],
+      vehicleId: `51-${index + 1}`,
+      tripId: `trip-51-${index + 1}`,
+    })),
+    { ...vehicles[0], vehicleId: '9988', routeId: '80', tripId: 'trip-80', delaySeconds: 360 },
+  ]
+  await routeDashboard(page, { vehicles: fleet })
+  await page.goto('/')
+
+  await page.getByRole('button', { name: 'Page suivante' }).click()
+  await expect(page.getByText('Page 2 sur 2')).toBeVisible()
+  await page.getByRole('combobox', { name: 'Trier', exact: true }).selectOption('delay')
+
+  await expect(page.getByText('Page 1 sur 2')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Véhicules en service' }).locator('tbody tr').first().getByText('9988', { exact: true })).toBeVisible()
+})
+
 test('actualise les données depuis le navigateur', async ({ page }) => {
   const requestCounts = await routeDashboard(page)
   await page.goto('/')
