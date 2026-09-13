@@ -46,7 +46,11 @@ jobs:
       - name: Run database-backed tests
         env:
           TEST_DATABASE_URL: postgres://ponctuel:ponctuel@127.0.0.1:5432/ponctuel?sslmode=disable
-        run: go test ./services/ingester/store ./services/ingester/gtfs
+        run: go test ./services/ingester/store
+      - name: Run GTFS database-backed tests
+        env:
+          TEST_DATABASE_URL: postgres://ponctuel:ponctuel@127.0.0.1:5432/ponctuel?sslmode=disable
+        run: go test ./services/ingester/gtfs
 
   frontend:
     name: Frontend tests and build
@@ -75,11 +79,14 @@ jobs:
       - run: docker compose -f deploy/compose/docker-compose.yml config
       - run: docker build -f Dockerfile.api -t ponctuel-api:ci .
       - run: docker build -f Dockerfile.ingester -t ponctuel-ingester:ci .
+      - run: docker build -f Dockerfile.matcher -t ponctuel-matcher:ci .
       - run: docker build -f Dockerfile.web -t ponctuel-web:ci .
 
   secrets:
     name: Secret scan
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:

@@ -1,9 +1,10 @@
 # Ponctuel
 
 Ponctuel mesure l’écart entre les prédictions d’arrivée des autobus de la STM
-et les arrivées observées. Le jalon 1 fournit une démonstration complète,
-reproductible et gratuite : ingestion GTFS-Realtime, persistance TimescaleDB,
-API GraphQL et dashboard Vue.
+et les arrivées observées. Les jalons 1 et 2 fournissent une démonstration
+complète, reproductible et gratuite : ingestion GTFS-Realtime, transport
+Redpanda, matcher d’arrivée, persistance TimescaleDB, API GraphQL et dashboard
+Vue.
 
 ## Démonstration en une commande
 
@@ -32,15 +33,22 @@ GTFS-Realtime fixture ou STM
             │
             ▼
      ingester Go ───────► TimescaleDB
-            │                    │
-            │                    ▼
-            └──────────────► API GraphQL Go
+            │
+            ├──────────────► Redpanda ───────► matcher Go
+            │                                      │
+            └──────────────────────────────────────┴──► TimescaleDB
+                                                       │
+                                                       ▼
+                                              API GraphQL Go
                                   │
                                   ▼
                          Vue 3 + dashboard SVG
 ```
 
 - `services/ingester` décode, normalise et déduplique les snapshots protobuf.
+- `services/bus` publie les événements versionnés dans `trip-updates` et
+  `vehicle-positions`; `services/matcher` compare `last_update` et `geofence`
+  et expose ses métriques Prometheus.
 - `db/migrations` crée les tables TimescaleDB, les contraintes et la vue des
   dernières positions.
 - `services/api` expose uniquement les champs nécessaires au dashboard, avec
@@ -91,7 +99,8 @@ l’attribution et les conditions d’utilisation officielles STM.
 
 ## Statut du projet
 
-Le jalon 1 est prêt pour une démonstration locale et un portfolio public. Il
-ne prétend pas être un service de production : authentification, haute
+Les jalons 1 et 2 sont prêts pour une démonstration locale et un portfolio
+public. La démonstration complète reste locale et gratuite. Le projet ne
+prétend pas être un service de production : authentification, haute
 disponibilité, rotation automatisée des secrets, rétention opérationnelle et
 SLA restent hors périmètre.

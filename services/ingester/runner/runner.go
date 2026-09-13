@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"ponctuel/services/bus"
+	eventcontract "ponctuel/services/events"
 	"ponctuel/services/ingester/config"
 	"ponctuel/services/ingester/domain"
 	"ponctuel/services/ingester/fetch"
@@ -19,6 +21,8 @@ type Metrics struct {
 	parseErrors      atomic.Uint64
 	duplicates       atomic.Uint64
 	insertedEvents   atomic.Uint64
+	publishedEvents  atomic.Uint64
+	publishErrors    atomic.Uint64
 	unauthorized     atomic.Uint64
 	rateLimited      atomic.Uint64
 	upstreamFailures atomic.Uint64
@@ -43,6 +47,8 @@ func (m *Metrics) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprintf(w, "# HELP ponctuel_ingester_parse_errors_total Feed normalization failures.\n# TYPE ponctuel_ingester_parse_errors_total counter\nponctuel_ingester_parse_errors_total %d\n", m.parseErrors.Load())
 	fmt.Fprintf(w, "# HELP ponctuel_ingester_duplicate_snapshots_total Known snapshots skipped.\n# TYPE ponctuel_ingester_duplicate_snapshots_total counter\nponctuel_ingester_duplicate_snapshots_total %d\n", m.duplicates.Load())
 	fmt.Fprintf(w, "# HELP ponctuel_ingester_inserted_events_total Normalized events inserted.\n# TYPE ponctuel_ingester_inserted_events_total counter\nponctuel_ingester_inserted_events_total %d\n", m.insertedEvents.Load())
+	fmt.Fprintf(w, "# HELP ponctuel_ingester_published_events_total Normalized events published to Redpanda.\n# TYPE ponctuel_ingester_published_events_total counter\nponctuel_ingester_published_events_total %d\n", m.publishedEvents.Load())
+	fmt.Fprintf(w, "# HELP ponctuel_ingester_publish_errors_total Redpanda publish failures.\n# TYPE ponctuel_ingester_publish_errors_total counter\nponctuel_ingester_publish_errors_total %d\n", m.publishErrors.Load())
 	fmt.Fprintf(w, "# HELP ponctuel_ingester_fetch_errors_total Fetch failures by safe status class.\n# TYPE ponctuel_ingester_fetch_errors_total counter\nponctuel_ingester_fetch_errors_total{class=\"unauthorized\"} %d\nponctuel_ingester_fetch_errors_total{class=\"rate_limited\"} %d\nponctuel_ingester_fetch_errors_total{class=\"upstream\"} %d\nponctuel_ingester_fetch_errors_total{class=\"http\"} %d\n", m.unauthorized.Load(), m.rateLimited.Load(), m.upstreamFailures.Load(), m.httpFailures.Load())
 }
 
@@ -51,21 +57,25 @@ type Runner struct {
 	source     fetch.Source
 	repository store.Repository
 	metrics    *Metrics
+	publisher  bus.Publisher
 }
 
 func New(cfg config.Config, source fetch.Source, repository store.Repository) *Runner {
+	return NewWithMetricsAndPublisher(cfg, source, repository, nil, nil)
+}
+
+func NewWithMetricsAndPublisher(cfg config.Config, source fetch.Source, repository store.Repository, metrics *Metrics, publisher bus.Publisher) *Runner {
 	if cfg.PollInterval <= 0 {
 		cfg.PollInterval = 30 * time.Second
 	}
-	return &Runner{config: cfg, source: source, repository: repository, metrics: NewMetrics()}
+	if metrics == nil {
+		metrics = NewMetrics()
+	}
+	return &Runner{config: cfg, source: source, repository: repository, metrics: metrics, publisher: publisher}
 }
 
 func NewWithMetrics(cfg config.Config, source fetch.Source, repository store.Repository, metrics *Metrics) *Runner {
-	runner := New(cfg, source, repository)
-	if metrics != nil {
-		runner.metrics = metrics
-	}
-	return runner
+	return NewWithMetricsAndPublisher(cfg, source, repository, metrics, nil)
 }
 
 func Run(ctx context.Context, cfg config.Config, source fetch.Source, repository store.Repository) error {
@@ -124,6 +134,22 @@ func (r *Runner) collectOnce(ctx context.Context) error {
 			continue
 		}
 		r.metrics.insertedEvents.Add(uint64(insertedEvents))
+		if r.publisher != nil {
+			for _, event := range events {
+				topic, topicErr := eventcontract.TopicFor(event.Kind)
+				if topicErr != nil {
+					r.metrics.publishErrors.Add(1)
+					collectedErrors = append(collectedErrors, topicErr)
+					continue
+				}
+				if publishErr := r.publisher.Publish(ctx, topic, eventcontract.Key(event), event); publishErr != nil {
+					r.metrics.publishErrors.Add(1)
+					collectedErrors = append(collectedErrors, fmt.Errorf("publish %s event: %w", topic, publishErr))
+					continue
+				}
+				r.metrics.publishedEvents.Add(1)
+			}
+		}
 	}
 	return errors.Join(collectedErrors...)
 }

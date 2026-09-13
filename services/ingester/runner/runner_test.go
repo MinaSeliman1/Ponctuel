@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"ponctuel/services/bus"
 	"ponctuel/services/ingester/config"
 	"ponctuel/services/ingester/domain"
 	"ponctuel/services/ingester/fetch"
@@ -43,6 +44,21 @@ func TestCollectOnceSkipsEventsForDuplicateSnapshot(t *testing.T) {
 	}
 	if repository.insertedEvents != 2 {
 		t.Fatalf("inserted events = %d, want duplicate cycle skipped", repository.insertedEvents)
+	}
+}
+
+func TestCollectOncePublishesAfterPersistingEvents(t *testing.T) {
+	publisher := &fakePublisher{}
+	runner := NewWithMetricsAndPublisher(config.Config{}, &fakeSource{snapshots: testSnapshots()}, &fakeRepository{}, nil, publisher)
+
+	if err := runner.collectOnce(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if publisher.published != 2 {
+		t.Fatalf("published events = %d, want 2", publisher.published)
+	}
+	if publisher.topics["trip-updates"] != 1 || publisher.topics["vehicle-positions"] != 1 {
+		t.Fatalf("published topics = %#v, want one event per topic", publisher.topics)
 	}
 }
 
@@ -84,6 +100,22 @@ type fakeRepository struct {
 	insertedEvents int
 }
 
+type fakePublisher struct {
+	published int
+	topics    map[string]int
+}
+
+func (p *fakePublisher) Publish(_ context.Context, topic, _ string, _ domain.Event) error {
+	if p.topics == nil {
+		p.topics = make(map[string]int)
+	}
+	p.published++
+	p.topics[topic]++
+	return nil
+}
+
+func (p *fakePublisher) Close() error { return nil }
+
 func (r *fakeRepository) InsertSnapshot(_ context.Context, snapshot domain.FeedSnapshot) (int64, bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -110,7 +142,11 @@ func (r *fakeRepository) CountEvents(context.Context) (int64, error) { return 0,
 func (r *fakeRepository) LatestVehicles(context.Context) ([]domain.Vehicle, error) {
 	return nil, nil
 }
-func (r *fakeRepository) Ping(context.Context) error { return nil }
+func (r *fakeRepository) InsertArrival(context.Context, domain.ArrivalObserved) (bool, error) {
+	return false, nil
+}
+func (r *fakeRepository) LatestStops(context.Context) ([]domain.Stop, error) { return nil, nil }
+func (r *fakeRepository) Ping(context.Context) error                         { return nil }
 
 func testSnapshots() map[domain.FeedType]domain.FeedSnapshot {
 	now := time.Now().UTC()
@@ -141,3 +177,4 @@ func testSnapshots() map[domain.FeedType]domain.FeedSnapshot {
 }
 
 var _ fetch.Source = (*fakeSource)(nil)
+var _ bus.Publisher = (*fakePublisher)(nil)

@@ -88,3 +88,7 @@ func (r *healthRepository) CountEvents(context.Context) (int64, error) { return 
 func (r *healthRepository) LatestVehicles(context.Context) ([]domain.Vehicle, error) {
 	return nil, nil
 }
+func (r *healthRepository) InsertArrival(context.Context, domain.ArrivalObserved) (bool, error) {
+	return false, nil
+}
+func (r *healthRepository) LatestStops(context.Context) ([]domain.Stop, error) { return nil, nil }

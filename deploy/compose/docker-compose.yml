@@ -1,6 +1,47 @@
 name: ponctuel
 
 services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v26.2.2
+    command:
+      - redpanda
+      - start
+      - --kafka-addr
+      - internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr
+      - internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr
+      - internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr
+      - internal://redpanda:8082,external://localhost:18082
+      - --schema-registry-addr
+      - internal://0.0.0.0:8081,external://localhost:18081
+      - --rpc-addr
+      - redpanda:33145
+      - --advertise-rpc-addr
+      - redpanda:33145
+      - --mode
+      - dev-container
+      - --smp
+      - '1'
+      - --default-log-level=info
+    volumes:
+      - ponctuel-redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk topic list --brokers redpanda:9092 >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  redpanda-init:
+    image: docker.redpanda.com/redpandadata/redpanda:v26.2.2
+    entrypoint: ["/bin/sh", "/init.sh"]
+    volumes:
+      - ./redpanda-init.sh:/init.sh:ro
+    depends_on:
+      redpanda:
+        condition: service_healthy
+
   db:
     image: timescale/timescaledb:2.30.0-pg17
     environment:
@@ -31,10 +72,14 @@ services:
       FRESHNESS_WINDOW: ${FRESHNESS_WINDOW:-168h}
       FIXTURE_DIR: /app/testdata/realtime
       RAW_DATA_DIR: /app/data/raw
+      REDPANDA_BROKERS: redpanda:9092
+      REDPANDA_GROUP_ID: ponctuel-matcher
       INGESTER_HTTP_ADDR: :8081
     depends_on:
       db:
         condition: service_healthy
+      redpanda-init:
+        condition: service_completed_successfully
     volumes:
       - ponctuel-raw-data:/app/data/raw
     healthcheck:
@@ -66,6 +111,32 @@ services:
       timeout: 3s
       retries: 12
 
+  matcher:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.matcher
+    environment:
+      APP_ENV: ${APP_ENV:-fixture}
+      DATABASE_URL: postgres://${POSTGRES_USER:-ponctuel}:${POSTGRES_PASSWORD:-ponctuel}@db:5432/${POSTGRES_DB:-ponctuel}?sslmode=disable
+      REDPANDA_BROKERS: redpanda:9092
+      REDPANDA_GROUP_ID: ${REDPANDA_GROUP_ID:-ponctuel-matcher}
+      MATCHER_HTTP_ADDR: :8082
+      MATCHER_STOPS_FILE: /app/testdata/gtfs/stops.txt
+      GEOFENCE_RADIUS_METERS: ${GEOFENCE_RADIUS_METERS:-60}
+      FRESHNESS_WINDOW: ${FRESHNESS_WINDOW:-168h}
+    depends_on:
+      db:
+        condition: service_healthy
+      redpanda-init:
+        condition: service_completed_successfully
+    ports:
+      - "${MATCHER_PORT:-8082}:8082"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8082/readyz >/dev/null"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
   web:
     build:
       context: ../..
@@ -84,4 +155,5 @@ services:
 volumes:
   ponctuel-db-data:
   ponctuel-raw-data:
+  ponctuel-redpanda-data:
 

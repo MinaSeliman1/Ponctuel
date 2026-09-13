@@ -22,6 +22,22 @@ func TestLoadDefaultsToFixtureModeAndThirtySecondPoll(t *testing.T) {
 	if cfg.STMAPIKey != "" {
 		t.Fatalf("fixture mode API key = %q, want empty", cfg.STMAPIKey)
 	}
+	if cfg.RedpandaGroupID == "" || cfg.GeofenceRadiusMeters <= 0 {
+		t.Fatalf("matcher defaults = %#v", cfg)
+	}
+}
+
+func TestLoadFromParsesRedpandaBrokers(t *testing.T) {
+	cfg, err := LoadFrom(testEnvironment(map[string]string{
+		"REDPANDA_BROKERS":       " redpanda:9092, localhost:19092 ",
+		"GEOFENCE_RADIUS_METERS": "45",
+	}))
+	if err != nil {
+		t.Fatalf("LoadFrom() error = %v", err)
+	}
+	if len(cfg.RedpandaBrokers) != 2 || cfg.RedpandaBrokers[0] != "redpanda:9092" || cfg.GeofenceRadiusMeters != 45 {
+		t.Fatalf("config = %#v, want parsed matcher values", cfg)
+	}
 }
 
 func TestLoadSTMModeRequiresAPIKey(t *testing.T) {

@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"ponctuel/services/bus"
 	"ponctuel/services/ingester"
 	"ponctuel/services/ingester/config"
 	"ponctuel/services/ingester/fetch"
@@ -30,6 +31,15 @@ func main() {
 		log.Fatal(err)
 	}
 	defer repository.Close()
+	var publisher bus.Publisher
+	if len(cfg.RedpandaBrokers) > 0 {
+		kafkaPublisher, publisherErr := bus.NewKafkaPublisher(cfg.RedpandaBrokers)
+		if publisherErr != nil {
+			log.Fatal(publisherErr)
+		}
+		publisher = kafkaPublisher
+		defer publisher.Close()
+	}
 
 	source := fetch.New(fetch.Config{
 		Mode:                cfg.AppEnv,
@@ -40,7 +50,7 @@ func main() {
 		APIKeyHeader:        cfg.STMAPIKeyHeader,
 	})
 	metrics := runner.NewMetrics()
-	ingesterRunner := runner.NewWithMetrics(cfg, source, repository, metrics)
+	ingesterRunner := runner.NewWithMetricsAndPublisher(cfg, source, repository, metrics, publisher)
 	server := &http.Server{Addr: cfg.HTTPAddr, Handler: ingester.NewHTTPHandler(cfg, repository, metrics)}
 
 	errCh := make(chan error, 2)

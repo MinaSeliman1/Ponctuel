@@ -37,7 +37,16 @@ try {
     Invoke-Compose @('down', '--volumes', '--remove-orphans')
     Invoke-Compose @('up', '--build', '--detach')
     Wait-Ready -Uri 'http://127.0.0.1:8080/readyz'
+    Wait-Ready -Uri 'http://127.0.0.1:8082/readyz'
     Wait-Ready -Uri 'http://127.0.0.1:3000/'
+
+    $matcherMetrics = (Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8082/metrics' -TimeoutSec 5).Content
+    if ($matcherMetrics -notmatch 'ponctuel_matcher_events_total\s+[1-9][0-9]*') {
+        throw 'Le matcher n''a consommé aucun événement Redpanda.'
+    }
+    if ($matcherMetrics -notmatch 'ponctuel_matcher_arrivals_total\s+[1-9][0-9]*') {
+        throw 'Le matcher n''a calculé aucune arrivée.'
+    }
 
     $query = @{
         query = 'query Smoke { dashboard { eventCount mode stale } vehicles(limit: 20) { vehicleId routeId latitude longitude } }'

@@ -1,0 +1,24 @@
+FROM golang:1.27.1-alpine AS build
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o /out/matcher ./cmd/matcher
+
+FROM alpine:3.22
+
+RUN addgroup -S ponctuel && adduser -S ponctuel -G ponctuel
+WORKDIR /app
+COPY --from=build /out/matcher /app/matcher
+COPY testdata/gtfs/stops.txt /app/testdata/gtfs/stops.txt
+USER ponctuel
+
+ENV APP_ENV=fixture \
+    MATCHER_HTTP_ADDR=:8082 \
+    MATCHER_STOPS_FILE=/app/testdata/gtfs/stops.txt \
+    GEOFENCE_RADIUS_METERS=60
+
+EXPOSE 8082
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=12 CMD wget -qO- http://127.0.0.1:8082/readyz >/dev/null || exit 1
+ENTRYPOINT ["/app/matcher"]

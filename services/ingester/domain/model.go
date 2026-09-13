@@ -18,6 +18,13 @@ const (
 	EventKindVehiclePosition EventKind = "vehicle_position"
 )
 
+type ArrivalMethod string
+
+const (
+	ArrivalMethodLastUpdate ArrivalMethod = "last_update"
+	ArrivalMethodGeofence   ArrivalMethod = "geofence"
+)
+
 type FeedSnapshot struct {
 	FeedType        FeedType
 	RecordedAt      time.Time
@@ -86,4 +93,21 @@ type Vehicle struct {
 	RecordedAt   time.Time
 	DelaySeconds int64
 	HasDelay     bool
+}
+
+type Stop struct {
+	StopID    string
+	Latitude  float64
+	Longitude float64
+}
+
+type ArrivalObserved struct {
+	TripID       string
+	ServiceDate  string
+	StopID       string
+	StopSequence uint32
+	ObservedAt   time.Time
+	Method       ArrivalMethod
+	Confidence   float64
+	Reason       string
 }

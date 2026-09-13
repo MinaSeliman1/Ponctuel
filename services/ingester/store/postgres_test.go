@@ -76,6 +76,24 @@ func TestPostgresRepositoryContract(t *testing.T) {
 	if insertedEvents != 1 {
 		t.Fatalf("inserted events = %d, want 1", insertedEvents)
 	}
+	arrival := domain.ArrivalObserved{
+		TripID:       "trip-1",
+		ServiceDate:  now.Format("2006-01-02"),
+		StopID:       "stop-1",
+		StopSequence: 7,
+		ObservedAt:   now.Add(time.Minute),
+		Method:       domain.ArrivalMethodLastUpdate,
+		Confidence:   0.7,
+		Reason:       "test arrival",
+	}
+	insertedArrival, err := repository.InsertArrival(ctx, arrival)
+	if err != nil || !insertedArrival {
+		t.Fatalf("first arrival inserted = %t, err %v; want true", insertedArrival, err)
+	}
+	duplicateArrival, err := repository.InsertArrival(ctx, arrival)
+	if err != nil || duplicateArrival {
+		t.Fatalf("duplicate arrival inserted = %t, err %v; want false", duplicateArrival, err)
+	}
 
 	count, err := repository.CountEvents(ctx)
 	if err != nil {
@@ -163,8 +181,8 @@ func applyTestMigrations(t *testing.T, ctx context.Context, pool *pgxpool.Pool) 
 		t.Fatal(err)
 	}
 	sort.Strings(migrationPaths)
-	if len(migrationPaths) != 4 {
-		t.Fatalf("migration count = %d, want 4", len(migrationPaths))
+	if len(migrationPaths) != 5 {
+		t.Fatalf("migration count = %d, want 5", len(migrationPaths))
 	}
 	for _, migrationPath := range migrationPaths {
 		migration, err := os.ReadFile(migrationPath)

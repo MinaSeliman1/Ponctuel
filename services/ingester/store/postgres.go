@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -19,6 +20,8 @@ type Repository interface {
 	InsertEvents(ctx context.Context, snapshotID int64, events []domain.Event) (int, error)
 	CountEvents(ctx context.Context) (int64, error)
 	LatestVehicles(ctx context.Context) ([]domain.Vehicle, error)
+	InsertArrival(ctx context.Context, arrival domain.ArrivalObserved) (bool, error)
+	LatestStops(ctx context.Context) ([]domain.Stop, error)
 	Ping(ctx context.Context) error
 }
 
@@ -222,6 +225,66 @@ func (r *PostgresRepository) LatestVehicles(ctx context.Context) ([]domain.Vehic
 	return vehicles, nil
 }
 
+func (r *PostgresRepository) InsertArrival(ctx context.Context, arrival domain.ArrivalObserved) (bool, error) {
+	if r == nil || r.pool == nil {
+		return false, fmt.Errorf("PostgreSQL repository is not initialized")
+	}
+	if strings.TrimSpace(arrival.TripID) == "" || strings.TrimSpace(arrival.ServiceDate) == "" || strings.TrimSpace(arrival.StopID) == "" {
+		return false, fmt.Errorf("insert arrival: trip_id, service_date and stop_id are required")
+	}
+	if arrival.ObservedAt.IsZero() {
+		return false, fmt.Errorf("insert arrival: observed_at is required")
+	}
+	if arrival.Method != domain.ArrivalMethodLastUpdate && arrival.Method != domain.ArrivalMethodGeofence {
+		return false, fmt.Errorf("insert arrival: unsupported method %q", arrival.Method)
+	}
+	if arrival.Confidence < 0 || arrival.Confidence > 1 {
+		return false, fmt.Errorf("insert arrival: confidence must be between 0 and 1")
+	}
+	if _, err := time.Parse("2006-01-02", arrival.ServiceDate); err != nil {
+		return false, fmt.Errorf("insert arrival: invalid service_date: %w", err)
+	}
+	result, err := r.pool.Exec(ctx, `
+		INSERT INTO arrival_observed
+			(trip_id, service_date, stop_id, stop_sequence, observed_at, source, method, confidence, reason)
+		VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8)
+		ON CONFLICT (trip_id, service_date, stop_id, method) DO NOTHING
+	`, arrival.TripID, arrival.ServiceDate, arrival.StopID, optionalSequence(arrival.StopSequence), arrival.ObservedAt.UTC(), string(arrival.Method), arrival.Confidence, arrival.Reason)
+	if err != nil {
+		return false, fmt.Errorf("insert arrival: %w", err)
+	}
+	return result.RowsAffected() == 1, nil
+}
+
+func (r *PostgresRepository) LatestStops(ctx context.Context) ([]domain.Stop, error) {
+	if r == nil || r.pool == nil {
+		return nil, fmt.Errorf("PostgreSQL repository is not initialized")
+	}
+	rows, err := r.pool.Query(ctx, `
+		SELECT DISTINCT ON (stop.stop_id) stop.stop_id, stop.stop_lat, stop.stop_lon
+		FROM gtfs_stop AS stop
+		JOIN gtfs_feed_version AS version ON version.feed_version = stop.feed_version
+		WHERE stop.stop_lat IS NOT NULL AND stop.stop_lon IS NOT NULL
+		ORDER BY stop.stop_id, version.retrieved_at DESC, version.feed_version DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("query latest stops: %w", err)
+	}
+	defer rows.Close()
+	stops := make([]domain.Stop, 0)
+	for rows.Next() {
+		var stop domain.Stop
+		if err := rows.Scan(&stop.StopID, &stop.Latitude, &stop.Longitude); err != nil {
+			return nil, fmt.Errorf("scan stop: %w", err)
+		}
+		stops = append(stops, stop)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate stops: %w", err)
+	}
+	return stops, nil
+}
+
 func optionalDelay(hasDelay bool, delaySeconds int64) any {
 	if !hasDelay {
 		return nil
@@ -231,6 +294,13 @@ func optionalDelay(hasDelay bool, delaySeconds int64) any {
 
 func nullableString(value string) any {
 	if value == "" {
+		return nil
+	}
+	return value
+}
+
+func optionalSequence(value uint32) any {
+	if value == 0 {
 		return nil
 	}
 	return value
