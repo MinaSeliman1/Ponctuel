@@ -76,6 +76,38 @@ describe('VehicleTable', () => {
     expect(wrapper.findAll('tbody tr')).toHaveLength(3)
   })
 
+  it('shows removable active filter chips and keeps the URL synchronized', async () => {
+    const wrapper = mount(VehicleTable, {
+      props: {
+        vehicles: [vehicle(1, '51', 30), vehicle(2, '80', 360)],
+        isLoading: false,
+        error: null,
+      },
+    })
+
+    expect(wrapper.find('.active-filters').exists()).toBe(false)
+    await wrapper.get('input[type="search"]').setValue('bus')
+    await wrapper.get('button[aria-label="Filtres actifs : 0"]').trigger('click')
+    await wrapper.get('#route-filter').setValue('80')
+    await wrapper.get('#delay-filter').setValue('late')
+
+    expect(wrapper.find('.active-filters').text()).toContain('Recherche : « bus »')
+    expect(wrapper.find('.active-filters').text()).toContain('Ligne : 80')
+    expect(wrapper.find('.active-filters').text()).toContain('Retard important')
+
+    await wrapper.get('button[aria-label="Supprimer le filtre de ligne 80"]').trigger('click')
+    expect(window.location.search).toBe('?q=bus&delay=late')
+    expect(wrapper.find('button[aria-label="Supprimer le filtre de ligne 80"]').exists()).toBe(false)
+
+    await wrapper.get('button[aria-label="Supprimer la recherche « bus »"]').trigger('click')
+    expect(window.location.search).toBe('?delay=late')
+
+    await wrapper.get('button[aria-label="Réinitialiser tous les filtres"]').trigger('click')
+    expect(wrapper.find('.active-filters').exists()).toBe(false)
+    expect(window.location.pathname).toBe('/')
+    expect(window.location.search).toBe('')
+  })
+
   it('paginates ten vehicles and exposes the current page', async () => {
     const wrapper = mount(VehicleTable, {
       props: {

@@ -49,6 +49,28 @@ const firstDisplayed = computed(() => filteredVehicles.value.length === 0 ? 0 : 
 const lastDisplayed = computed(() => Math.min(currentPage.value * pageSize, filteredVehicles.value.length))
 const hasActiveCriteria = computed(() => Boolean(search.value.trim() || selectedRoute.value || selectedDelay.value !== 'all'))
 const activeFilterCount = computed(() => Number(Boolean(selectedRoute.value)) + Number(selectedDelay.value !== 'all'))
+const activeFilterChips = computed(() => {
+  const chips: Array<{ key: 'search' | 'route' | 'delay'; label: string; ariaLabel: string }> = []
+  const trimmedSearch = search.value.trim()
+
+  if (trimmedSearch) chips.push({
+    key: 'search',
+    label: `Recherche : « ${trimmedSearch} »`,
+    ariaLabel: `Supprimer la recherche « ${trimmedSearch} »`,
+  })
+  if (selectedRoute.value) chips.push({
+    key: 'route',
+    label: `Ligne : ${selectedRoute.value}`,
+    ariaLabel: `Supprimer le filtre de ligne ${selectedRoute.value}`,
+  })
+  if (selectedDelay.value !== 'all') chips.push({
+    key: 'delay',
+    label: selectedDelay.value === 'late' ? 'Retard important' : 'À l’heure ou léger retard',
+    ariaLabel: `Supprimer le filtre « ${selectedDelay.value === 'late' ? 'retard important' : 'à l’heure ou léger retard'} »`,
+  })
+
+  return chips
+})
 
 watch([search, selectedRoute, selectedDelay], () => {
   currentPage.value = 1
@@ -68,6 +90,12 @@ function resetFilters(): void {
   selectedRoute.value = ''
   selectedDelay.value = 'all'
   currentPage.value = 1
+}
+
+function clearFilter(filter: 'search' | 'route' | 'delay'): void {
+  if (filter === 'search') search.value = ''
+  if (filter === 'route') selectedRoute.value = ''
+  if (filter === 'delay') selectedDelay.value = 'all'
 }
 
 function focusFiltersContent(): void {
@@ -195,6 +223,21 @@ function formatTime(value: string): string {
         </div>
       </div>
     </div>
+  </div>
+
+  <div v-if="activeFilterChips.length > 0" class="active-filters" role="group" aria-label="Filtres actifs">
+    <span class="active-filters-label">Filtres actifs</span>
+    <ul class="filter-chips">
+      <li v-for="chip in activeFilterChips" :key="chip.key">
+        <button class="filter-chip" type="button" :aria-label="chip.ariaLabel" @click="clearFilter(chip.key)">
+          <span>{{ chip.label }}</span>
+          <span class="chip-remove" aria-hidden="true">×</span>
+        </button>
+      </li>
+    </ul>
+    <button class="text-button reset-all-filters" type="button" aria-label="Réinitialiser tous les filtres" @click="resetFilters">
+      Réinitialiser tout
+    </button>
   </div>
 
   <div v-if="props.isLoading" class="table-state" role="status">Chargement des véhicules…</div>
