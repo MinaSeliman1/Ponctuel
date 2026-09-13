@@ -143,6 +143,11 @@ test('filtre et pagine les véhicules depuis le navigateur', async ({ page }) =>
   await page.goto('/')
 
   await expect(page.getByText('Affichage de 1 à 10 sur 11 véhicules')).toBeVisible()
+  await page.locator('input[type="search"]').fill('1234')
+  await expect(page.getByRole('button', { name: 'Filtres actifs : 1' })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Filtres actifs' })).toContainText('Recherche : « 1234 »')
+  await page.locator('input[type="search"]').fill('')
+  await expect(page.getByRole('button', { name: 'Filtres actifs : 0' })).toBeVisible()
   await page.getByRole('button', { name: 'Filtres actifs : 0' }).click()
   await page.getByRole('combobox', { name: 'Ligne', exact: true }).selectOption('80')
 

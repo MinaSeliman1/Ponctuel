@@ -87,7 +87,7 @@ describe('VehicleTable', () => {
 
     expect(wrapper.find('.active-filters').exists()).toBe(false)
     await wrapper.get('input[type="search"]').setValue('bus')
-    await wrapper.get('button[aria-label="Filtres actifs : 0"]').trigger('click')
+    await wrapper.get('button[aria-label="Filtres actifs : 1"]').trigger('click')
     await wrapper.get('#route-filter').setValue('80')
     await wrapper.get('#delay-filter').setValue('late')
 
@@ -170,6 +170,20 @@ describe('VehicleTable', () => {
     wrapper.unmount()
   })
 
+  it('compte la recherche dans les filtres actifs et la retire quand elle est effacée', async () => {
+    const wrapper = mount(VehicleTable, {
+      props: { vehicles: [vehicle(1)], isLoading: false, error: null },
+    })
+
+    expect(wrapper.find('button[aria-label="Filtres actifs : 0"]').exists()).toBe(true)
+    await wrapper.get('input[type="search"]').setValue('bus-1')
+    expect(wrapper.find('button[aria-label="Filtres actifs : 1"]').exists()).toBe(true)
+    expect(wrapper.get('[role="group"]').text()).toContain('Recherche : « bus-1 »')
+
+    await wrapper.get('input[type="search"]').setValue('')
+    expect(wrapper.find('button[aria-label="Filtres actifs : 0"]').exists()).toBe(true)
+  })
+
   it('enables CSV export only when filtered vehicles are available', async () => {
     const wrapper = mount(VehicleTable, {
       props: {
@@ -197,7 +211,7 @@ describe('VehicleTable', () => {
 
     expect((wrapper.get('input[type="search"]').element as HTMLInputElement).value).toBe('bus')
     expect(wrapper.find('#route-filter').exists()).toBe(false)
-    await wrapper.get('button[aria-label="Filtres actifs : 2"]').trigger('click')
+    await wrapper.get('button[aria-label="Filtres actifs : 3"]').trigger('click')
     expect((wrapper.get('#route-filter').element as HTMLSelectElement).value).toBe('80')
     expect((wrapper.get('#delay-filter').element as HTMLSelectElement).value).toBe('late')
 

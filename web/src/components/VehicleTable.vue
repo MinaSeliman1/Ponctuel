@@ -63,7 +63,7 @@ const paginatedVehicles = computed(() => {
 const firstDisplayed = computed(() => filteredVehicles.value.length === 0 ? 0 : (currentPage.value - 1) * pageSize + 1)
 const lastDisplayed = computed(() => Math.min(currentPage.value * pageSize, filteredVehicles.value.length))
 const hasActiveCriteria = computed(() => Boolean(search.value.trim() || selectedRoute.value || selectedDelay.value !== 'all'))
-const activeFilterCount = computed(() => Number(Boolean(selectedRoute.value)) + Number(selectedDelay.value !== 'all'))
+const activeFilterCount = computed(() => Number(Boolean(search.value.trim())) + Number(Boolean(selectedRoute.value)) + Number(selectedDelay.value !== 'all'))
 const activeFilterChips = computed(() => {
   const chips: Array<{ key: 'search' | 'route' | 'delay'; label: string; ariaLabel: string }> = []
   const trimmedSearch = search.value.trim()
