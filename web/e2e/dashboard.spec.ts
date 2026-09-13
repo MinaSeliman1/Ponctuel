@@ -99,6 +99,27 @@ test('ouvre les détails d’un autobus depuis la carte au clavier', async ({ pa
   await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
+test('contrôle les couches de la carte depuis le navigateur', async ({ page }) => {
+  await routeDashboard(page)
+  await page.goto('/')
+
+  const vehicleLayer = page.getByRole('checkbox', { name: 'Positions des autobus' })
+  const roadLayer = page.getByRole('checkbox', { name: 'Réseau routier' })
+  await expect(vehicleLayer).toBeChecked()
+  await expect(roadLayer).toBeChecked()
+  await expect(page.getByRole('group', { name: 'Légende des retards' })).toContainText('Retard important')
+
+  await vehicleLayer.uncheck()
+  await expect(page.getByRole('button', { name: 'Autobus 1234', exact: true })).toHaveCount(0)
+  await roadLayer.uncheck()
+  await expect(page.locator('.map-streets')).toHaveCount(0)
+
+  await vehicleLayer.check()
+  await roadLayer.check()
+  await expect(page.getByRole('button', { name: 'Autobus 1234', exact: true })).toBeVisible()
+  await expect(page.locator('.map-streets')).toBeVisible()
+})
+
 test('conserve les véhicules quand la qualité est indisponible', async ({ page }) => {
   await routeDashboard(page, { qualityUnavailable: true })
   await page.goto('/')

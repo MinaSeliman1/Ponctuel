@@ -54,4 +54,30 @@ describe('VehicleMap', () => {
 
     expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
   })
+
+  it('contrôle les couches disponibles et expose une légende des retards', async () => {
+    const wrapper = mount(VehicleMap, { props: { vehicles, isLoading: false } })
+
+    expect(wrapper.get('[aria-label="Légende des retards"]').text()).toContain('À l’heure')
+    expect(wrapper.find('[aria-label="Arrêts"]').exists()).toBe(false)
+    expect(wrapper.find('[aria-label="Zones de service"]').exists()).toBe(false)
+
+    await wrapper.get('[aria-label="Positions des autobus"]').setValue(false)
+    expect(wrapper.find('.vehicle-markers').exists()).toBe(false)
+
+    await wrapper.get('[aria-label="Réseau routier"]').setValue(false)
+    expect(wrapper.find('.map-streets').exists()).toBe(false)
+
+    await wrapper.get('[aria-label="Positions des autobus"]').setValue(true)
+    expect(wrapper.find('.vehicle-markers').exists()).toBe(true)
+  })
+
+  it('ferme la fiche quand les positions sont masquées', async () => {
+    const wrapper = mount(VehicleMap, { props: { vehicles, isLoading: false } })
+
+    await wrapper.get('[aria-label="Autobus 1234"]').trigger('click')
+    await wrapper.get('[aria-label="Positions des autobus"]').setValue(false)
+
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+  })
 })
