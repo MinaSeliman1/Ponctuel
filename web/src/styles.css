@@ -81,6 +81,31 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(28, 104, 204
 .scale-control text { fill: var(--muted); font-size: 11px; }
 .map-loading text { fill: var(--muted); font-size: 16px; }
 
+.quality-panel { margin-top: 22px; padding: 20px 22px 18px; border: 1px solid var(--line); border-radius: 9px; box-shadow: var(--shadow); background: #fff; }
+.quality-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 12px; }
+.quality-heading h2 { margin: 5px 0 3px; color: var(--ink); font-size: 18px; letter-spacing: -.3px; }
+.quality-subtitle { margin: 0; color: var(--muted); font-size: 12px; }
+.quality-stale { flex: 0 0 auto; padding: 6px 9px; border-radius: 5px; color: var(--red); background: #fff1f1; font-size: 11px; font-weight: 750; }
+.quality-content { min-width: 0; }
+.quality-chart { display: block; width: 100%; height: auto; min-height: 190px; overflow: visible; }
+.quality-axis { stroke: #cfd9e1; stroke-width: 1; }
+.quality-zero { stroke: #aebdca; stroke-dasharray: 5 5; stroke-width: 1.2; }
+.quality-tick text, .quality-axis-label { fill: var(--faint); font-size: 11px; }
+.quality-line { fill: none; stroke: #1765b1; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2.5; }
+.quality-point { stroke: #fff; stroke-width: 2; }
+.quality-point-good { fill: var(--green); }
+.quality-point-warn { fill: var(--amber); }
+.quality-point-late { fill: var(--red); }
+.quality-table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 7px; }
+.quality-table { min-width: 560px; font-variant-numeric: tabular-nums; }
+.quality-table th, .quality-table td { padding: 8px 10px; }
+.quality-table td { color: var(--muted); }
+.quality-table .quality-point-good { color: var(--green); font-weight: 750; }
+.quality-table .quality-point-warn { color: var(--amber); font-weight: 750; }
+.quality-table .quality-point-late { color: var(--red); font-weight: 750; }
+.quality-state { display: grid; place-items: center; min-height: 165px; border: 1px dashed var(--line); border-radius: 7px; color: var(--muted); background: var(--surface); font-size: 13px; text-align: center; }
+.quality-state-error { color: var(--red); }
+
 .vehicles-panel { margin-top: 22px; }
 .vehicles-toolbar { justify-content: space-between; gap: 18px; margin-bottom: 12px; }
 .vehicles-toolbar h2 { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--ink); font-size: 18px; letter-spacing: -.3px; }
@@ -134,6 +159,8 @@ tbody tr:hover { background: #fafcfd; }
   .content-heading h1 { font-size: 22px; }
   .mode-summary { padding-top: 5px; }
   .transit-map { height: 330px; }
+  .quality-panel { padding: 17px 15px 15px; }
+  .quality-heading { flex-direction: column; gap: 8px; }
   .map-controls { transform: scale(.92); transform-origin: left bottom; }
   .vehicles-toolbar { align-items: flex-start; flex-direction: column; }
   .table-actions { width: 100%; }
