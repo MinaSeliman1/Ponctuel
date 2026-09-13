@@ -71,6 +71,8 @@ GTFS-Realtime fixture ou STM
   et aux filtres actifs, directement dans le navigateur.
 - La recherche et les filtres sont partageables via les paramètres de l’URL,
   sans rechargement ni stockage de données côté serveur.
+- Le bouton « Copier le lien » permet de partager directement l’état courant
+  des filtres depuis le tableau.
 
 ## Mesure et predictor
 

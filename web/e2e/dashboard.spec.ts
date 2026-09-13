@@ -213,3 +213,23 @@ test('restaure et partage les filtres depuis l’URL', async ({ page }) => {
   await page.locator('input[type="search"]').fill('9988')
   await expect(page).toHaveURL(/q=9988&route=80&delay=late/)
 })
+
+test('copie le lien absolu des filtres actifs', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          ;(window as Window & { __copiedVehicleLink?: string }).__copiedVehicleLink = value
+        },
+      },
+    })
+  })
+  await routeDashboard(page, { vehicles: [vehicles[0], { ...vehicles[0], vehicleId: '9988', routeId: '80', delaySeconds: 360 }] })
+  await page.goto('/?route=80&delay=late')
+
+  await page.getByRole('button', { name: 'Copier le lien des filtres' }).click()
+  await expect(page.getByRole('status')).toContainText('Le lien des filtres a été copié.')
+  await expect.poll(() => page.evaluate(() => (window as Window & { __copiedVehicleLink?: string }).__copiedVehicleLink))
+    .toBe('http://127.0.0.1:4173/?route=80&delay=late')
+})

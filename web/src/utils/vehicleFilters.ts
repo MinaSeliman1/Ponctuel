@@ -33,6 +33,19 @@ export function buildVehicleFiltersUrl(state: VehicleFilterState, currentUrl: st
   return `${url.pathname}${url.search}${url.hash}`
 }
 
+export function buildVehicleFiltersShareUrl(state: VehicleFilterState, currentUrl: string = window.location.href): string {
+  const current = new URL(currentUrl)
+  return new URL(buildVehicleFiltersUrl(state, currentUrl), current.origin).toString()
+}
+
+export async function copyVehicleFiltersLink(state: VehicleFilterState): Promise<void> {
+  if (!navigator.clipboard?.writeText) {
+    throw new Error('Clipboard API indisponible')
+  }
+
+  await navigator.clipboard.writeText(buildVehicleFiltersShareUrl(state))
+}
+
 export function syncVehicleFiltersToUrl(state: VehicleFilterState): void {
   window.history.replaceState(null, '', buildVehicleFiltersUrl(state))
 }
