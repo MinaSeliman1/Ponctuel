@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import type { Vehicle } from '../types'
+import { downloadCsv, vehiclesToCsv } from '../utils/csv'
 
 type DelayFilter = 'all' | 'on-time' | 'late'
 
@@ -88,6 +89,12 @@ function toggleFilters(): void {
   }
 }
 
+function exportVehicles(): void {
+  if (filteredVehicles.value.length === 0) return
+  const timestamp = new Date().toISOString().replaceAll(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
+  downloadCsv(`ponctuel-vehicules-${timestamp}.csv`, vehiclesToCsv(filteredVehicles.value))
+}
+
 function formatDelay(seconds: number | null): string {
   if (seconds === null) return '—'
   const minutes = Math.round(seconds / 60)
@@ -118,6 +125,16 @@ function formatTime(value: string): string {
         <span class="sr-only">Rechercher un véhicule</span>
         <input v-model="search" type="search" placeholder="Rechercher une ligne, un véhicule ou un trajet…" />
       </label>
+      <button
+        class="export-button"
+        type="button"
+        aria-label="Exporter les véhicules en CSV"
+        :disabled="props.isLoading || Boolean(props.error) || filteredVehicles.length === 0"
+        @click="exportVehicles"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 18v2h14v-2" /></svg>
+        Exporter CSV
+      </button>
       <div class="filter-menu">
         <button
           ref="filtersTrigger"

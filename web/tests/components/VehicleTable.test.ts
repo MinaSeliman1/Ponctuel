@@ -109,4 +109,19 @@ describe('VehicleTable', () => {
     expect(document.activeElement).toBe(filtersButton.element)
     wrapper.unmount()
   })
+
+  it('enables CSV export only when filtered vehicles are available', async () => {
+    const wrapper = mount(VehicleTable, {
+      props: {
+        vehicles: [vehicle(1, '51'), vehicle(2, '80')],
+        isLoading: false,
+        error: null,
+      },
+    })
+    const exportButton = wrapper.get('button[aria-label="Exporter les véhicules en CSV"]')
+
+    expect(exportButton.attributes('disabled')).toBeUndefined()
+    await wrapper.get('input[type="search"]').setValue('inexistant')
+    expect(wrapper.get('button[aria-label="Exporter les véhicules en CSV"]').attributes('disabled')).toBeDefined()
+  })
 })
