@@ -1,7 +1,7 @@
 # Ponctuel
 
 Ponctuel mesure l’écart entre les prédictions d’arrivée des autobus de la STM
-et les arrivées observées. Les jalons 1 à 5 fournissent une démonstration
+et les arrivées observées. Les jalons 1 à 6 fournissent une démonstration
 complète, reproductible et gratuite : ingestion GTFS-Realtime, transport
 Redpanda, matcher d’arrivée, mesure d’erreur TimescaleDB, API GraphQL,
 predictor Python optionnel et dashboard Vue.
@@ -88,6 +88,18 @@ npm --prefix web run build
 docker compose -f deploy/compose/docker-compose.yml config
 ```
 
+Le parcours navigateur utilise Chromium et des fixtures GraphQL locales; il
+ne contacte pas STM et ne mesure pas la disponibilité de l’API réelle :
+
+```powershell
+Push-Location web
+npx playwright install chromium
+npm run test:e2e
+Pop-Location
+```
+
+Le smoke test Compose reste le contrôle d’intégration des services backend.
+
 Pour les détails Compose, voir [deploy/compose/README.md](deploy/compose/README.md).
 Les règles de contribution et de sécurité sont dans
 [CONTRIBUTING.md](CONTRIBUTING.md) et [SECURITY.md](SECURITY.md). Le chart
@@ -120,7 +132,7 @@ l’attribution et les conditions d’utilisation officielles STM.
 
 ## Statut du projet
 
-Les jalons 1 à 5 sont prêts pour une démonstration locale, un déploiement k3s
+Les jalons 1 à 6 sont prêts pour une démonstration locale, un déploiement k3s
 documenté et un portfolio public. La démonstration complète reste locale et
 gratuite. Le projet ne
 prétend pas être un service de production : authentification, haute
