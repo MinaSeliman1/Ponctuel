@@ -1,10 +1,11 @@
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
-import { afterEach } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import VehicleTable from '../../src/components/VehicleTable.vue'
 
 afterEach(() => {
   window.history.replaceState(null, '', '/')
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined })
 })
 
 function vehicle(index: number, routeId = '51', delaySeconds: number | null = 30) {
@@ -150,5 +151,38 @@ describe('VehicleTable', () => {
     await nextTick()
     expect(window.location.search).toBe('?q=9988&route=80&delay=late')
     wrapper.unmount()
+  })
+
+  it('copies the active filter link and announces success', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
+    const wrapper = mount(VehicleTable, {
+      props: {
+        vehicles: [vehicle(1, '51', 30), vehicle(2, '80', 360)],
+        isLoading: false,
+        error: null,
+      },
+    })
+
+    await wrapper.get('button[aria-label="Filtres actifs : 0"]').trigger('click')
+    await wrapper.get('#route-filter').setValue('80')
+    await wrapper.get('button[aria-label="Copier le lien des filtres"]').trigger('click')
+    await nextTick()
+
+    expect(writeText).toHaveBeenCalledWith('http://localhost:3000/?route=80')
+    expect(wrapper.get('.share-button').text()).toContain('Lien copié')
+    expect(wrapper.get('[role="status"]').text()).toContain('copié')
+  })
+
+  it('announces an unavailable Clipboard API', async () => {
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined })
+    const wrapper = mount(VehicleTable, {
+      props: { vehicles: [vehicle(1)], isLoading: false, error: null },
+    })
+
+    await wrapper.get('button[aria-label="Copier le lien des filtres"]').trigger('click')
+    await nextTick()
+
+    expect(wrapper.get('[role="status"]').text()).toContain('Impossible de copier')
   })
 })

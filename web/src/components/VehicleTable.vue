@@ -2,7 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import type { Vehicle } from '../types'
 import { downloadCsv, vehiclesToCsv } from '../utils/csv'
-import { readVehicleFilters, syncVehicleFiltersToUrl, type DelayFilter } from '../utils/vehicleFilters'
+import { copyVehicleFiltersLink, readVehicleFilters, syncVehicleFiltersToUrl, type DelayFilter } from '../utils/vehicleFilters'
 
 const props = defineProps<{
   vehicles: Vehicle[]
@@ -19,6 +19,7 @@ const selectedRoute = ref(initialFilters.route)
 const selectedDelay = ref<DelayFilter>(initialFilters.delay)
 const currentPage = ref(1)
 const pageSize = 10
+const copyStatus = ref<'idle' | 'success' | 'error'>('idle')
 
 const routeOptions = computed(() => Array.from(new Set(
   props.vehicles
@@ -51,6 +52,7 @@ const activeFilterCount = computed(() => Number(Boolean(selectedRoute.value)) + 
 
 watch([search, selectedRoute, selectedDelay], () => {
   currentPage.value = 1
+  copyStatus.value = 'idle'
   syncVehicleFiltersToUrl({ search: search.value, route: selectedRoute.value, delay: selectedDelay.value })
 })
 watch(pageCount, (count) => {
@@ -96,6 +98,15 @@ function exportVehicles(): void {
   downloadCsv(`ponctuel-vehicules-${timestamp}.csv`, vehiclesToCsv(filteredVehicles.value))
 }
 
+async function copyShareableLink(): Promise<void> {
+  try {
+    await copyVehicleFiltersLink({ search: search.value, route: selectedRoute.value, delay: selectedDelay.value })
+    copyStatus.value = 'success'
+  } catch {
+    copyStatus.value = 'error'
+  }
+}
+
 function formatDelay(seconds: number | null): string {
   if (seconds === null) return '—'
   const minutes = Math.round(seconds / 60)
@@ -136,6 +147,18 @@ function formatTime(value: string): string {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 18v2h14v-2" /></svg>
         Exporter CSV
       </button>
+      <button
+        class="share-button"
+        type="button"
+        aria-label="Copier le lien des filtres"
+        @click="copyShareableLink"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.2 1.2M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 7.9 20l1.2-1.2" /></svg>
+        {{ copyStatus === 'success' ? 'Lien copié' : 'Copier le lien' }}
+      </button>
+      <span v-if="copyStatus !== 'idle'" class="sr-only" role="status" aria-live="polite">
+        {{ copyStatus === 'success' ? 'Le lien des filtres a été copié.' : 'Impossible de copier le lien des filtres.' }}
+      </span>
       <div class="filter-menu">
         <button
           ref="filtersTrigger"

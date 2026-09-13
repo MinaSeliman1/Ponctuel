@@ -120,13 +120,14 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(28, 104, 204
 .vehicles-toolbar h2 { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--ink); font-size: 18px; letter-spacing: -.3px; }
 .table-actions { gap: 12px; }
 .search-field { display: flex; align-items: center; gap: 9px; width: min(430px, 35vw); height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; color: #60728a; background: #fff; }
-.search-field svg, .filter-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.search-field svg, .filter-button svg, .export-button svg, .share-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .search-field input { min-width: 0; width: 100%; border: 0; outline: 0; color: var(--ink); font-size: 12px; }
 .search-field input::placeholder { color: #91a0b3; }
 .export-button { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 12px; border: 1px solid #b9d7d0; border-radius: 8px; color: #16705e; background: #f1faf7; font-size: 12px; font-weight: 700; }
-.export-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .export-button:hover:not(:disabled) { border-color: #79b9aa; background: #e5f6f1; }
 .export-button:disabled { border-color: var(--line); color: var(--faint); background: var(--surface); cursor: not-allowed; }
+.share-button { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 12px; border: 1px solid #c7d8ef; border-radius: 8px; color: #1765b1; background: #f4f8fd; font-size: 12px; font-weight: 700; }
+.share-button:hover { border-color: #91b6df; background: #eaf2fb; }
 .filter-button { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; color: #344762; background: #fff; font-size: 12px; font-weight: 650; }
 .filter-menu { position: relative; }
 .filter-button[aria-expanded="true"] { border-color: #a9c9e9; color: #1765b1; background: #f4f8fd; }
@@ -185,7 +186,7 @@ tbody tr:hover { background: #fafcfd; }
   .vehicles-toolbar { align-items: flex-start; flex-direction: column; }
   .table-actions { width: 100%; }
   .search-field { width: 100%; }
-  .export-button { flex: 1 0 auto; justify-content: center; }
+  .export-button, .share-button { flex: 1 0 auto; justify-content: center; }
   .filter-button { flex: 0 0 auto; }
   .filter-panel { right: auto; left: 0; }
   .app-footer { align-items: flex-start; flex-direction: column; gap: 8px; padding: 24px 16px; }
@@ -200,7 +201,7 @@ tbody tr:hover { background: #fafcfd; }
   .map-controls { bottom: 9px; left: 9px; padding: 9px 11px; }
   .map-controls label { font-size: 11px; }
   .table-actions { align-items: stretch; }
-  .export-button, .filter-button { justify-content: center; }
+  .export-button, .share-button, .filter-button { justify-content: center; }
   .filter-panel { width: min(270px, calc(100vw - 32px)); }
   .table-footer { align-items: flex-start; flex-direction: column; }
 }
