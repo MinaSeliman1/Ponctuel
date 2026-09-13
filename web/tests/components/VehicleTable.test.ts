@@ -225,6 +225,32 @@ describe('VehicleTable', () => {
     expect((wrapper.get('#vehicle-sort').element as HTMLSelectElement).value).toBe('route')
   })
 
+  it('restores filters and sort after browser navigation, then removes its listener', async () => {
+    const addEventListener = vi.spyOn(window, 'addEventListener')
+    const removeEventListener = vi.spyOn(window, 'removeEventListener')
+    const wrapper = mount(VehicleTable, {
+      props: {
+        vehicles: [vehicle(1, '51', 30), vehicle(2, '80', 360)],
+        isLoading: false,
+        error: null,
+      },
+    })
+
+    window.history.pushState(null, '', '/?route=80&sort=delay')
+    window.dispatchEvent(new PopStateEvent('popstate'))
+    await nextTick()
+
+    expect(wrapper.findAll('tbody tr')).toHaveLength(1)
+    expect(wrapper.find('tbody').text()).toContain('bus-2')
+    expect((wrapper.get('#vehicle-sort').element as HTMLSelectElement).value).toBe('delay')
+    expect(addEventListener).toHaveBeenCalledWith('popstate', expect.any(Function))
+
+    wrapper.unmount()
+    expect(removeEventListener).toHaveBeenCalledWith('popstate', expect.any(Function))
+    addEventListener.mockRestore()
+    removeEventListener.mockRestore()
+  })
+
   it('copies the active filter link and announces success', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })

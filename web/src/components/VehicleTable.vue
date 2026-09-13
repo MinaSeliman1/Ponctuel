@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Vehicle } from '../types'
 import { downloadCsv, vehiclesToCsv } from '../utils/csv'
 import { copyVehicleFiltersLink, readVehicleFilters, syncVehicleFiltersToUrl, type DelayFilter, type VehicleSort } from '../utils/vehicleFilters'
@@ -92,6 +92,19 @@ watch([search, selectedRoute, selectedDelay, sortBy], () => {
   copyStatus.value = 'idle'
   syncVehicleFiltersToUrl({ search: search.value, route: selectedRoute.value, delay: selectedDelay.value, sort: sortBy.value })
 })
+
+function restoreFiltersFromUrl(): void {
+  const filters = readVehicleFilters()
+  search.value = filters.search
+  selectedRoute.value = filters.route
+  selectedDelay.value = filters.delay
+  sortBy.value = filters.sort ?? 'arrival'
+  currentPage.value = 1
+  copyStatus.value = 'idle'
+}
+
+onMounted(() => window.addEventListener('popstate', restoreFiltersFromUrl))
+onBeforeUnmount(() => window.removeEventListener('popstate', restoreFiltersFromUrl))
 watch(pageCount, (count) => {
   if (currentPage.value > count) currentPage.value = count
 })
