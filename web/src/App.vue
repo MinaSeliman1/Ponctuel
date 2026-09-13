@@ -13,6 +13,7 @@ const errorSummaries = ref<ErrorSummary[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const qualityError = ref(false)
+const refreshError = ref(false)
 const isRefreshing = ref(false)
 const preferencesOpen = ref(false)
 const autoRefreshEnabled = ref(true)
@@ -23,6 +24,10 @@ let refreshTimer: number | undefined
 const refreshIntervalMs = 30_000
 
 const modeLabel = computed(() => dashboard.value?.mode.toLowerCase() === 'stm' ? 'Temps réel' : 'Fixture local')
+
+function isAbortError(reason: unknown): boolean {
+  return reason instanceof DOMException && reason.name === 'AbortError'
+}
 
 async function loadData() {
   if (controller !== null && (isLoading.value || isRefreshing.value)) return
@@ -38,7 +43,10 @@ async function loadData() {
   }
   error.value = null
   qualityError.value = false
-  errorSummaries.value = []
+  refreshError.value = false
+  if (!hasExistingData) {
+    errorSummaries.value = []
+  }
 
   const [dashboardResult, vehiclesResult, qualityResult] = await Promise.allSettled([
     fetchDashboard(currentController.signal),
@@ -48,20 +56,23 @@ async function loadData() {
 
   if (dashboardResult.status === 'fulfilled') {
     dashboard.value = dashboardResult.value
-  } else if (!(dashboardResult.reason instanceof DOMException && dashboardResult.reason.name === 'AbortError')) {
-    error.value = 'unavailable'
+  } else if (!isAbortError(dashboardResult.reason)) {
+    if (hasExistingData) refreshError.value = true
+    else error.value = 'unavailable'
   }
 
   if (vehiclesResult.status === 'fulfilled') {
     vehicles.value = vehiclesResult.value
-  } else if (!(vehiclesResult.reason instanceof DOMException && vehiclesResult.reason.name === 'AbortError')) {
-    error.value = 'unavailable'
+  } else if (!isAbortError(vehiclesResult.reason)) {
+    if (hasExistingData) refreshError.value = true
+    else error.value = 'unavailable'
   }
 
   if (qualityResult.status === 'fulfilled') {
     errorSummaries.value = qualityResult.value
-  } else if (!(qualityResult.reason instanceof DOMException && qualityResult.reason.name === 'AbortError')) {
-    qualityError.value = true
+  } else if (!isAbortError(qualityResult.reason)) {
+    if (hasExistingData) refreshError.value = true
+    else qualityError.value = true
   }
 
   if (controller === currentController) {
@@ -142,7 +153,7 @@ onUnmounted(() => {
       </div>
     </header>
     <main class="main-content">
-      <StatusPanel :dashboard="dashboard" :is-loading="isLoading" :is-refreshing="isRefreshing" :error="error" @refresh="loadData" />
+      <StatusPanel :dashboard="dashboard" :is-loading="isLoading" :is-refreshing="isRefreshing" :error="error" :refresh-error="refreshError" @refresh="loadData" />
       <div class="content-heading"><div><span class="eyebrow">Réseau en direct</span><h1>Les autobus, au bon moment.</h1></div><span class="mode-summary"><span class="mode-dot"></span>{{ modeLabel }}</span></div>
       <VehicleMap :vehicles="vehicles" :is-loading="isLoading" />
       <ErrorQualityChart :summaries="errorSummaries" :is-loading="isLoading" :has-error="qualityError" :stale="dashboard?.stale ?? false" />

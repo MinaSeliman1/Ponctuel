@@ -52,6 +52,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(28, 104, 204
 .status-muted, .metric-placeholder { color: var(--faint); }
 .status-error { color: var(--red); font-size: 16px; }
 .status-detail { margin: 0; color: var(--faint); font-size: 13px; }
+.status-refresh-error { color: var(--amber); }
 .refresh-actions { display: flex; align-items: center; gap: 12px; margin-top: 7px; }
 .text-button { padding: 0; border: 0; color: #1765b1; background: none; font-size: 13px; font-weight: 700; }
 .text-button:disabled { color: var(--faint); cursor: wait; }
