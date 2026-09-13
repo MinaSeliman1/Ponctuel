@@ -7,6 +7,8 @@
 - Le mode fixture est le mode par défaut de la démonstration et de la CI.
 - Les URLs STM, les payloads et les erreurs exposées au navigateur sont
   contrôlés; les clés ne doivent pas apparaître dans les logs.
+- Les actions GitHub utilisées par la CI sont référencées par commit immuable,
+  puis surveillées par Dependabot afin de limiter le risque d’un tag mutable.
 - `.env` et les variantes `.env.*` sont ignorés par Git, sauf `.env.example`;
   `data/` et les artefacts de build le sont également.
 - Les champs texte exportés en CSV sont neutralisés contre les formules de
