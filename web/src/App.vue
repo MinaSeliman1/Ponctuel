@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { fetchDashboard, fetchErrorSummary, fetchVehicles } from './api/client'
 import ErrorQualityChart from './components/ErrorQualityChart.vue'
 import StatusPanel from './components/StatusPanel.vue'
@@ -14,6 +14,8 @@ const isLoading = ref(true)
 const error = ref<string | null>(null)
 const qualityError = ref(false)
 const isRefreshing = ref(false)
+const preferencesOpen = ref(false)
+const autoRefreshEnabled = ref(true)
 let controller: AbortController | null = null
 let refreshTimer: number | undefined
 const refreshIntervalMs = 30_000
@@ -66,13 +68,29 @@ async function loadData() {
   }
 }
 
+function stopRefreshTimer(): void {
+  if (refreshTimer !== undefined) {
+    window.clearInterval(refreshTimer)
+    refreshTimer = undefined
+  }
+}
+
+function scheduleRefresh(): void {
+  stopRefreshTimer()
+  if (autoRefreshEnabled.value) {
+    refreshTimer = window.setInterval(() => void loadData(), refreshIntervalMs)
+  }
+}
+
+watch(autoRefreshEnabled, scheduleRefresh)
+
 onMounted(() => {
   void loadData()
-  refreshTimer = window.setInterval(() => void loadData(), refreshIntervalMs)
+  scheduleRefresh()
 })
 onUnmounted(() => {
   controller?.abort()
-  if (refreshTimer !== undefined) window.clearInterval(refreshTimer)
+  stopRefreshTimer()
 })
 </script>
 
@@ -80,7 +98,24 @@ onUnmounted(() => {
   <div class="app-shell">
     <header class="topbar">
       <div class="brand-lockup"><span class="brand-name">Ponctuel</span><span class="brand-divider" aria-hidden="true"></span><span class="brand-context">Réseau STM</span></div>
-      <div class="topbar-actions"><span class="live-clock">Suivi des positions</span><button class="icon-button" type="button" aria-label="Préférences"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.8 1.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.1h-2.6v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-1.8-1.8.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H6.4v-2.6h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 1.8-1.8.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V4.4H15v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.8 1.8-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1V13h-.1a1.7 1.7 0 0 0-1.5 1Z" /></svg></button></div>
+      <div class="topbar-actions">
+        <span class="live-clock">Suivi des positions</span>
+        <div class="preferences-wrap">
+          <button class="icon-button" type="button" aria-label="Préférences" aria-controls="preferences-panel" :aria-expanded="preferencesOpen" aria-haspopup="dialog" @click="preferencesOpen = !preferencesOpen">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3m0 14v3M2 12h3m14 0h3m-4.9-7.1-2.1 2.1m-10 10-2.1 2.1m0-14.2 2.1 2.1m10 10 2.1 2.1" /></svg>
+          </button>
+          <div v-if="preferencesOpen" id="preferences-panel" class="preferences-panel" role="dialog" aria-labelledby="preferences-title">
+            <h2 id="preferences-title">Préférences</h2>
+            <label class="preference-toggle">
+              <input v-model="autoRefreshEnabled" type="checkbox" />
+              <span>Actualisation automatique</span>
+            </label>
+            <p v-if="autoRefreshEnabled">Les données sont rafraîchies toutes les 30 secondes.</p>
+            <p v-else>Actualisation automatique suspendue. Le bouton Actualiser reste disponible.</p>
+            <button class="text-button" type="button" @click="preferencesOpen = false">Fermer</button>
+          </div>
+        </div>
+      </div>
     </header>
     <main class="main-content">
       <StatusPanel :dashboard="dashboard" :is-loading="isLoading" :is-refreshing="isRefreshing" :error="error" @refresh="loadData" />

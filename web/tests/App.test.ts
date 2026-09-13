@@ -92,4 +92,24 @@ describe('App prediction quality integration', () => {
     expect(wrapper.text()).toContain('1234')
     wrapper.unmount()
   })
+
+  it('allows disabling automatic refresh while keeping manual refresh available', async () => {
+    const fetchSpy = mockApi()
+    const wrapper = mount(App)
+
+    await flushPromises()
+    await wrapper.get('button[aria-label="Préférences"]').trigger('click')
+
+    expect(wrapper.get('[role="dialog"] h2').text()).toBe('Préférences')
+    const autoRefresh = wrapper.get('input[type="checkbox"]')
+    expect((autoRefresh.element as HTMLInputElement).checked).toBe(true)
+
+    await autoRefresh.setValue(false)
+    expect(wrapper.text()).toContain('Actualisation automatique suspendue')
+
+    await wrapper.get('button[aria-label="Actualiser les données"]').trigger('click')
+    await flushPromises()
+    expect(fetchSpy).toHaveBeenCalledTimes(6)
+    wrapper.unmount()
+  })
 })
