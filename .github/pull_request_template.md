@@ -1,6 +1,6 @@
 ## Résumé
 
-<!-- Décris le changement et son impact utilisateur ou opérationnel. -->
+Décrire le changement et le problème résolu.
 
 ## Vérifications
 
@@ -11,14 +11,17 @@
 - [ ] `npm --prefix web run build`
 - [ ] `docker compose -f deploy/compose/docker-compose.yml config`
 - [ ] Smoke test fixture exécuté si le changement touche Compose ou l’ingestion
+- [ ] `git diff --check`
+- [ ] Documentation mise à jour si nécessaire
+- [ ] Aucun secret, payload réel ou donnée personnelle ajouté
+- [ ] Le changement reste compatible avec la démonstration gratuite
 
 ## Données et sécurité
 
-- [ ] Aucun secret, payload réel inutile ou clé STM ajouté
 - [ ] Les variables sensibles restent dans `.env` ou les secrets CI
 - [ ] Les limites et l’attribution STM sont toujours respectées
 
-## Notes pour la revue
+## Risques et compatibilité
 
-<!-- Ajoute les limites connues, captures utiles ou décisions d’architecture. -->
-
+Décrire les migrations, changements de contrat, risques et plan de retour en
+arrière. Indiquer `N/A` lorsqu’il n’y en a pas.
