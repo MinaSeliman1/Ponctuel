@@ -14,7 +14,10 @@ const vehicleColumns: Array<{ label: string; value: (vehicle: Vehicle) => CsvVal
 
 function escapeCsvValue(value: CsvValue): string {
   const text = value === null ? '' : String(value)
-  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text
+  const safeText = typeof value === 'string' && /^[\t\r\n ]*[=+\-@]/.test(text)
+    ? `'${text}`
+    : text
+  return /[",\r\n]/.test(safeText) ? `"${safeText.replaceAll('"', '""')}"` : safeText
 }
 
 export function vehiclesToCsv(vehicles: Vehicle[]): string {
