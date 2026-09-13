@@ -36,6 +36,6 @@ placer `STM_API_KEY` dans un ConfigMap, une image ou un fichier versionné.
 ## Pull requests
 
 Explique le problème, la décision technique et les commandes exécutées. Ne
-publie jamais `STM_API_KEY`, un fichier `.env`, une réponse réelle complète ou
+publie jamais `STM_API_KEY`, un fichier `.env` ou `.env.*`, une réponse réelle complète ou
 des données personnelles dans une issue, une PR ou un log.
 

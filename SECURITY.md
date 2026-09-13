@@ -7,7 +7,10 @@
 - Le mode fixture est le mode par défaut de la démonstration et de la CI.
 - Les URLs STM, les payloads et les erreurs exposées au navigateur sont
   contrôlés; les clés ne doivent pas apparaître dans les logs.
-- `.env`, `data/` et les artefacts de build sont ignorés par Git.
+- `.env` et les variantes `.env.*` sont ignorés par Git, sauf `.env.example`;
+  `data/` et les artefacts de build le sont également.
+- Les champs texte exportés en CSV sont neutralisés contre les formules de
+  tableur avant le téléchargement local.
 
 ## Signaler une vulnérabilité
 
@@ -19,8 +22,8 @@ du fournisseur si elle a été exposée.
 
 ## Limites actuelles
 
-Le jalon 1 est une démonstration locale et un socle de portfolio. Il ne
-comprend pas encore l’authentification utilisateur, la haute disponibilité,
+La démonstration actuelle reste locale et constitue un socle de portfolio. Elle
+ne comprend pas encore l’authentification utilisateur, la haute disponibilité,
 la rotation automatisée des secrets, la rétention opérationnelle ou une
 garantie de SLA. Une mise en production devra ajouter ces contrôles et une
 revue de confidentialité des données de transport.
