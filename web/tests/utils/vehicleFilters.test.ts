@@ -13,8 +13,10 @@ describe('vehicle filter URL state', () => {
       search: 'late bus',
       route: '80',
       delay: 'late',
+      sort: 'arrival',
     })
-    expect(readVehicleFilters('?delay=unknown')).toEqual({ search: '', route: '', delay: 'all' })
+    expect(readVehicleFilters('?delay=unknown&sort=unknown')).toEqual({ search: '', route: '', delay: 'all', sort: 'arrival' })
+    expect(readVehicleFilters('?sort=delay').sort).toBe('delay')
   })
 
   it('builds a stable URL and removes default values', () => {
@@ -23,33 +25,37 @@ describe('vehicle filter URL state', () => {
       'https://example.test/dashboard?old=value#vehicles',
     )).toBe('/dashboard?old=value&q=bus&route=80&delay=late#vehicles')
     expect(buildVehicleFiltersUrl(
-      { search: '', route: '', delay: 'all' },
-      'https://example.test/dashboard?q=old&route=51&delay=late',
+      { search: 'bus', route: '80', delay: 'late', sort: 'delay' },
+      'https://example.test/dashboard?old=value#vehicles',
+    )).toBe('/dashboard?old=value&q=bus&route=80&delay=late&sort=delay#vehicles')
+    expect(buildVehicleFiltersUrl(
+      { search: '', route: '', delay: 'all', sort: 'arrival' },
+      'https://example.test/dashboard?q=old&route=51&delay=late&sort=vehicle',
     )).toBe('/dashboard')
   })
 
   it('updates the current URL without creating browser history entries', () => {
     const replaceState = vi.spyOn(window.history, 'replaceState')
 
-    syncVehicleFiltersToUrl({ search: 'bus', route: '', delay: 'on-time' })
+    syncVehicleFiltersToUrl({ search: 'bus', route: '', delay: 'on-time', sort: 'route' })
 
-    expect(replaceState).toHaveBeenCalledWith(null, '', '/?q=bus&delay=on-time')
+    expect(replaceState).toHaveBeenCalledWith(null, '', '/?q=bus&delay=on-time&sort=route')
   })
 
   it('builds an absolute share URL while preserving unrelated parameters', () => {
     expect(buildVehicleFiltersShareUrl(
-      { search: 'bus', route: '80', delay: 'late' },
+      { search: 'bus', route: '80', delay: 'late', sort: 'delay' },
       'https://example.test/dashboard?tab=vehicles#table',
-    )).toBe('https://example.test/dashboard?tab=vehicles&q=bus&route=80&delay=late#table')
+    )).toBe('https://example.test/dashboard?tab=vehicles&q=bus&route=80&delay=late&sort=delay#table')
   })
 
   it('copies the absolute share URL through the Clipboard API', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.assign(navigator, { clipboard: { writeText } })
 
-    await copyVehicleFiltersLink({ search: 'bus', route: '80', delay: 'late' })
+    await copyVehicleFiltersLink({ search: 'bus', route: '80', delay: 'late', sort: 'delay' })
 
-    expect(writeText).toHaveBeenCalledWith('http://localhost:3000/?q=bus&route=80&delay=late')
+    expect(writeText).toHaveBeenCalledWith('http://localhost:3000/?q=bus&route=80&delay=late&sort=delay')
   })
 
   it('fails explicitly when Clipboard is unavailable', async () => {

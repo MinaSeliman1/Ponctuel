@@ -207,6 +207,24 @@ describe('VehicleTable', () => {
     wrapper.unmount()
   })
 
+  it('restores and synchronizes the selected sort through the URL', async () => {
+    window.history.replaceState(null, '', '/?sort=delay')
+    const wrapper = mount(VehicleTable, {
+      props: {
+        vehicles: [vehicle(1, '51', 30), vehicle(2, '80', 360)],
+        isLoading: false,
+        error: null,
+      },
+    })
+
+    expect((wrapper.get('#vehicle-sort').element as HTMLSelectElement).value).toBe('delay')
+    expect(wrapper.findAll('tbody tr').at(0)?.find('td:nth-child(2)').text()).toBe('bus-2')
+
+    await wrapper.get('#vehicle-sort').setValue('route')
+    expect(window.location.search).toBe('?sort=route')
+    expect((wrapper.get('#vehicle-sort').element as HTMLSelectElement).value).toBe('route')
+  })
+
   it('copies the active filter link and announces success', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
