@@ -1,35 +1,56 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { fetchDashboard, fetchVehicles } from './api/client'
+import { fetchDashboard, fetchErrorSummary, fetchVehicles } from './api/client'
+import ErrorQualityChart from './components/ErrorQualityChart.vue'
 import StatusPanel from './components/StatusPanel.vue'
 import VehicleMap from './components/VehicleMap.vue'
 import VehicleTable from './components/VehicleTable.vue'
-import type { Dashboard, Vehicle } from './types'
+import type { Dashboard, ErrorSummary, Vehicle } from './types'
 
 const dashboard = ref<Dashboard | null>(null)
 const vehicles = ref<Vehicle[]>([])
+const errorSummaries = ref<ErrorSummary[]>([])
 const isLoading = ref(true)
 const error = ref<string | null>(null)
+const qualityError = ref(false)
 let controller: AbortController | null = null
 
 const modeLabel = computed(() => dashboard.value?.mode.toLowerCase() === 'stm' ? 'Temps réel' : 'Fixture local')
 
 async function loadData() {
   controller?.abort()
-  controller = new AbortController()
+  const currentController = new AbortController()
+  controller = currentController
   isLoading.value = true
   error.value = null
-  try {
-    const [nextDashboard, nextVehicles] = await Promise.all([
-      fetchDashboard(controller.signal),
-      fetchVehicles(500, controller.signal),
-    ])
-    dashboard.value = nextDashboard
-    vehicles.value = nextVehicles
-  } catch (cause) {
-    if (cause instanceof DOMException && cause.name === 'AbortError') return
+  qualityError.value = false
+  errorSummaries.value = []
+
+  const [dashboardResult, vehiclesResult, qualityResult] = await Promise.allSettled([
+    fetchDashboard(currentController.signal),
+    fetchVehicles(500, currentController.signal),
+    fetchErrorSummary(100, currentController.signal),
+  ])
+
+  if (dashboardResult.status === 'fulfilled') {
+    dashboard.value = dashboardResult.value
+  } else if (!(dashboardResult.reason instanceof DOMException && dashboardResult.reason.name === 'AbortError')) {
     error.value = 'unavailable'
-  } finally {
+  }
+
+  if (vehiclesResult.status === 'fulfilled') {
+    vehicles.value = vehiclesResult.value
+  } else if (!(vehiclesResult.reason instanceof DOMException && vehiclesResult.reason.name === 'AbortError')) {
+    error.value = 'unavailable'
+  }
+
+  if (qualityResult.status === 'fulfilled') {
+    errorSummaries.value = qualityResult.value
+  } else if (!(qualityResult.reason instanceof DOMException && qualityResult.reason.name === 'AbortError')) {
+    qualityError.value = true
+  }
+
+  if (controller === currentController) {
     isLoading.value = false
   }
 }
@@ -48,6 +69,7 @@ onUnmounted(() => controller?.abort())
       <StatusPanel :dashboard="dashboard" :is-loading="isLoading" :error="error" @refresh="loadData" />
       <div class="content-heading"><div><span class="eyebrow">Réseau en direct</span><h1>Les autobus, au bon moment.</h1></div><span class="mode-summary"><span class="mode-dot"></span>{{ modeLabel }}</span></div>
       <VehicleMap :vehicles="vehicles" :is-loading="isLoading" />
+      <ErrorQualityChart :summaries="errorSummaries" :is-loading="isLoading" :has-error="qualityError" :stale="dashboard?.stale ?? false" />
       <VehicleTable :vehicles="vehicles" :is-loading="isLoading" :error="error" />
     </main>
     <footer class="app-footer"><span>Données STM · Visualisation Ponctuel</span><a href="https://www.stm.info/fr/a-propos/developpeurs" target="_blank" rel="noreferrer">Source et conditions d’utilisation</a></footer>
