@@ -1,7 +1,12 @@
 import { mount } from '@vue/test-utils'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import StatusPanel from '../../src/components/StatusPanel.vue'
 
 describe('StatusPanel', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('shows loading state', () => {
     const wrapper = mount(StatusPanel, {
       props: { dashboard: null, isLoading: true, error: null },
@@ -58,5 +63,30 @@ describe('StatusPanel', () => {
     await wrapper.setProps({ isRefreshing: true })
     expect(wrapper.text()).toContain('Actualisation des données')
     expect(wrapper.get('button[aria-label="Actualiser les données"]').attributes('disabled')).toBeDefined()
+  })
+
+  it('updates the freshness label as time passes without new props', async () => {
+    vi.useFakeTimers()
+    const collectedAt = new Date('2026-09-13T08:00:00Z')
+    vi.setSystemTime(collectedAt)
+    const wrapper = mount(StatusPanel, {
+      props: {
+        dashboard: {
+          eventCount: 42,
+          lastCollectedAt: collectedAt.toISOString(),
+          mode: 'fixture',
+          stale: false,
+        },
+        isLoading: false,
+        error: null,
+      },
+    })
+
+    expect(wrapper.text()).toContain('À l’instant — données à jour.')
+
+    await vi.advanceTimersByTimeAsync(60_000)
+
+    expect(wrapper.text()).toContain('Il y a 1 minute.')
+    wrapper.unmount()
   })
 })
