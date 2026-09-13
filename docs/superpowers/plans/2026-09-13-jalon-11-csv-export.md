@@ -39,5 +39,5 @@
 
 - [x] Exécuter tests, typecheck, build, E2E, `scripts/check.ps1` et smoke.
 - [x] Vérifier `git diff --check`, les artefacts et l’arbre Git.
-- [ ] Commiter sur `jalon-11`, pousser et ouvrir une PR vers `jalon-10`.
-- [ ] Attendre une CI verte sans fusion automatique.
+- [x] Commiter sur `jalon-11`, pousser et ouvrir une PR vers `jalon-10`.
+- [x] Attendre une CI verte sans fusion automatique.
