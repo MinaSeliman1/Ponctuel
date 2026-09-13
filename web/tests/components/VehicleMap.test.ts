@@ -46,6 +46,22 @@ describe('VehicleMap', () => {
     expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
   })
 
+  it('ferme la fiche avec Échap et restitue le focus au marqueur', async () => {
+    const wrapper = mount(VehicleMap, {
+      attachTo: document.body,
+      props: { vehicles, isLoading: false },
+    })
+    const marker = wrapper.get('[aria-label="Autobus 1234"]')
+
+    ;(marker.element as SVGGElement).focus()
+    await marker.trigger('keydown', { key: 'Enter' })
+    await wrapper.get('.transit-map').trigger('keydown', { key: 'Escape' })
+
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+    expect(document.activeElement).toBe(marker.element)
+    wrapper.unmount()
+  })
+
   it('retire la fiche si le véhicule sélectionné disparaît des données', async () => {
     const wrapper = mount(VehicleMap, { props: { vehicles, isLoading: false } })
 
