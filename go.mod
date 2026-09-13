@@ -6,7 +6,7 @@ require (
 	github.com/99designs/gqlgen v0.17.94
 	github.com/MobilityData/gtfs-realtime-bindings/golang/gtfs v1.0.0
 	github.com/jackc/pgx/v5 v5.11.0
-	github.com/segmentio/kafka-go v0.4.49
+	github.com/segmentio/kafka-go v0.4.51
 	github.com/vektah/gqlparser/v2 v2.5.36
 	google.golang.org/protobuf v1.36.12
 )
