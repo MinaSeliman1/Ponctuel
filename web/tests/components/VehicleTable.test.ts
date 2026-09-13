@@ -1,6 +1,18 @@
 import { mount } from '@vue/test-utils'
 import VehicleTable from '../../src/components/VehicleTable.vue'
 
+function vehicle(index: number, routeId = '51', delaySeconds: number | null = 30) {
+  return {
+    vehicleId: `bus-${index}`,
+    routeId,
+    tripId: `trip-${index}`,
+    latitude: 45.5,
+    longitude: -73.5,
+    recordedAt: '2026-09-12T14:00:00Z',
+    delaySeconds,
+  }
+}
+
 describe('VehicleTable', () => {
   it('shows an empty state', () => {
     const wrapper = mount(VehicleTable, {
@@ -31,5 +43,50 @@ describe('VehicleTable', () => {
     expect(wrapper.text()).toContain('31-113')
     expect(wrapper.text()).toContain('trip-1')
     expect(wrapper.text()).toContain('+2 min')
+  })
+
+  it('filters by route and delay, then resets the advanced filters', async () => {
+    const wrapper = mount(VehicleTable, {
+      props: {
+        vehicles: [vehicle(1, '51', 30), vehicle(2, '51', 360), vehicle(3, '80', null)],
+        isLoading: false,
+        error: null,
+      },
+    })
+
+    await wrapper.get('button[aria-label="Filtres actifs : 0"]').trigger('click')
+    await wrapper.get('#route-filter').setValue('80')
+
+    expect(wrapper.findAll('tbody tr')).toHaveLength(1)
+    expect(wrapper.find('tbody').text()).toContain('bus-3')
+
+    await wrapper.get('#delay-filter').setValue('late')
+    expect(wrapper.find('.table-state').text()).toContain('Aucun autobus')
+
+    const resetButton = wrapper.findAll('#vehicle-filters button').find((button) => button.text() === 'Réinitialiser')
+    expect(resetButton).toBeDefined()
+    await resetButton!.trigger('click')
+    expect(wrapper.findAll('tbody tr')).toHaveLength(3)
+  })
+
+  it('paginates ten vehicles and exposes the current page', async () => {
+    const wrapper = mount(VehicleTable, {
+      props: {
+        vehicles: Array.from({ length: 11 }, (_, index) => vehicle(index + 1)),
+        isLoading: false,
+        error: null,
+      },
+    })
+
+    expect(wrapper.findAll('tbody tr')).toHaveLength(10)
+    expect(wrapper.find('.page-label').text()).toBe('Page 1 sur 2')
+    expect(wrapper.get('button[aria-label="Page précédente"]').attributes('disabled')).toBeDefined()
+
+    await wrapper.get('button[aria-label="Page suivante"]').trigger('click')
+
+    expect(wrapper.findAll('tbody tr')).toHaveLength(1)
+    expect(wrapper.find('tbody').text()).toContain('bus-11')
+    expect(wrapper.find('.page-label').text()).toBe('Page 2 sur 2')
+    expect(wrapper.get('button[aria-label="Page suivante"]').attributes('disabled')).toBeDefined()
   })
 })

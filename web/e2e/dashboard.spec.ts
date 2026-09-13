@@ -24,7 +24,7 @@ const errorSummary = [
   { routeId: '80', horizonSeconds: 300, sampleCount: 2, meanErrorSeconds: -30, onTimeRate: 1 },
 ]
 
-async function routeDashboard(page: Page, options: { qualityUnavailable?: boolean } = {}) {
+async function routeDashboard(page: Page, options: { qualityUnavailable?: boolean; vehicles?: typeof vehicles } = {}) {
   await page.route('**/query', async (route) => {
     const payload = route.request().postDataJSON() as { query?: string }
     const query = payload.query ?? ''
@@ -46,7 +46,7 @@ async function routeDashboard(page: Page, options: { qualityUnavailable?: boolea
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ data: { vehicles } }),
+        body: JSON.stringify({ data: { vehicles: options.vehicles ?? vehicles } }),
       })
       return
     }
@@ -83,4 +83,33 @@ test('conserve les véhicules quand la qualité est indisponible', async ({ page
   await expect(page.getByRole('alert')).toContainText('Qualité indisponible pour le moment.')
   await expect(page.getByRole('heading', { name: 'Véhicules en service' })).toBeVisible()
   await expect(page.getByText('1234', { exact: true })).toBeVisible()
+})
+
+test('filtre et pagine les véhicules depuis le navigateur', async ({ page }) => {
+  const fleet = [
+    ...vehicles,
+    ...Array.from({ length: 9 }, (_, index) => ({
+      ...vehicles[0],
+      vehicleId: `51-${index + 1}`,
+      tripId: `trip-51-${index + 1}`,
+    })),
+    { ...vehicles[0], vehicleId: '9988', routeId: '80', tripId: 'trip-80', delaySeconds: 360 },
+  ]
+  await routeDashboard(page, { vehicles: fleet })
+  await page.goto('/')
+
+  await expect(page.getByText('Affichage de 1 à 10 sur 11 véhicules')).toBeVisible()
+  await page.getByRole('button', { name: 'Filtres actifs : 0' }).click()
+  await page.getByRole('combobox', { name: 'Ligne', exact: true }).selectOption('80')
+
+  await expect(page.getByText('9988', { exact: true })).toBeVisible()
+  await expect(page.getByText('1234', { exact: true })).not.toBeVisible()
+
+  await page.getByRole('combobox', { name: 'Retard', exact: true }).selectOption('on-time')
+  await expect(page.getByText('Aucun autobus ne correspond à cette recherche ou à ces filtres.')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Réinitialiser' }).click()
+  await page.getByRole('button', { name: 'Page suivante' }).click()
+  await expect(page.getByText('Page 2 sur 2')).toBeVisible()
+  await expect(page.getByText('9988', { exact: true })).toBeVisible()
 })
