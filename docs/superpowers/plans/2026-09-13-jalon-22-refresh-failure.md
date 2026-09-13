@@ -45,6 +45,6 @@
 - [x] Documenter le comportement non destructif dans le README.
 - [x] Exécuter tests frontend, typecheck, build et E2E.
 - [x] Exécuter les contrôles backend, Compose, Helm et smoke.
-- [ ] Vérifier le diff, commiter sur `jalon-22`, pousser et ouvrir une PR vers
+- [x] Vérifier le diff, commiter sur `jalon-22`, pousser et ouvrir une PR vers
   `jalon-21`.
-- [ ] Attendre la CI de la PR sans fusion automatique.
+- [x] Attendre la CI de la PR sans fusion automatique.
