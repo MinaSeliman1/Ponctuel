@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import type { Vehicle } from '../types'
 
 const props = defineProps<{
@@ -12,20 +12,36 @@ const selectedVehicleId = ref<string | null>(null)
 const selectedVehicle = computed(() => props.vehicles.find((vehicle) => vehicle.vehicleId === selectedVehicleId.value) ?? null)
 const showStreets = ref(true)
 const showVehicles = ref(true)
+const markerRefs = new Map<string, SVGGElement>()
 
 watch(selectedVehicle, (vehicle) => {
   if (!vehicle) selectedVehicleId.value = null
 })
 watch(showVehicles, (visible) => {
-  if (!visible) selectedVehicleId.value = null
+  if (!visible) closeSelection()
 })
 
 function selectVehicle(vehicleId: string): void {
   if (props.vehicles.some((vehicle) => vehicle.vehicleId === vehicleId)) selectedVehicleId.value = vehicleId
 }
 
-function clearSelection(): void {
+function setMarkerRef(vehicleId: string, element: unknown): void {
+  const tagName = element && typeof element === 'object' && 'tagName' in element && typeof element.tagName === 'string'
+    ? element.tagName
+    : ''
+  if (tagName.toLowerCase() === 'g') {
+    markerRefs.set(vehicleId, element as SVGGElement)
+  } else {
+    markerRefs.delete(vehicleId)
+  }
+}
+
+function closeSelection(restoreFocus = false): void {
+  const vehicleId = selectedVehicleId.value
   selectedVehicleId.value = null
+  if (restoreFocus && vehicleId) {
+    void nextTick(() => markerRefs.get(vehicleId)?.focus())
+  }
 }
 
 function xFor(longitude: number): number {
@@ -69,7 +85,7 @@ function formatTime(value: string): string {
     <span><i class="legend-dot legend-dot-warn" aria-hidden="true"></i>Léger retard</span>
     <span><i class="legend-dot legend-dot-late" aria-hidden="true"></i>Retard important</span>
   </div>
-  <svg class="transit-map" viewBox="0 0 1200 360" role="img" aria-label="Carte schématique des positions d’autobus à Montréal">
+  <svg class="transit-map" viewBox="0 0 1200 360" role="img" aria-label="Carte schématique des positions d’autobus à Montréal" @keydown.esc.stop="closeSelection(true)">
     <rect width="1200" height="360" fill="#eef2f3" />
     <path class="map-water" d="M910 0h290v360H1010c-18-29-5-61-31-90-24-27-50-34-47-76 2-32 38-48 34-82-4-35-45-55-56-112Z" />
     <path class="map-island" d="M0 0h894c19 29 38 47 39 73 1 38-42 58-42 96 0 36 40 51 39 88-1 36-50 56-82 103H0Z" />
@@ -92,6 +108,7 @@ function formatTime(value: string): string {
       <g
         v-for="vehicle in visibleVehicles"
         :key="vehicle.vehicleId"
+        :ref="(element) => setMarkerRef(vehicle.vehicleId, element)"
         class="vehicle-marker"
         :class="{ 'vehicle-marker-selected': selectedVehicleId === vehicle.vehicleId }"
         :transform="`translate(${xFor(vehicle.longitude)} ${yFor(vehicle.latitude)})`"
@@ -114,7 +131,7 @@ function formatTime(value: string): string {
   <aside v-if="selectedVehicle" class="vehicle-detail" role="dialog" :aria-labelledby="`vehicle-detail-title-${selectedVehicle.vehicleId}`">
     <div class="vehicle-detail-heading">
       <span class="eyebrow">Véhicule sélectionné</span>
-      <button class="vehicle-detail-close" type="button" :aria-label="`Fermer le détail de l’autobus ${selectedVehicle.vehicleId}`" @click="clearSelection">×</button>
+      <button class="vehicle-detail-close" type="button" :aria-label="`Fermer le détail de l’autobus ${selectedVehicle.vehicleId}`" @click="closeSelection(true)">×</button>
     </div>
     <h3 :id="`vehicle-detail-title-${selectedVehicle.vehicleId}`">Autobus {{ selectedVehicle.vehicleId }}</h3>
     <dl class="vehicle-detail-list">

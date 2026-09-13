@@ -95,8 +95,16 @@ test('ouvre les détails d’un autobus depuis la carte au clavier', async ({ pa
   await expect(page.getByRole('dialog')).toContainText('trip-51')
   await expect(marker).toHaveAttribute('aria-pressed', 'true')
 
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(marker).toBeFocused()
+
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('dialog')).toBeVisible()
+
   await page.getByRole('button', { name: 'Fermer le détail de l’autobus 1234' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(marker).toBeFocused()
 })
 
 test('contrôle les couches de la carte depuis le navigateur', async ({ page }) => {
