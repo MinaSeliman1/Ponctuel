@@ -1,0 +1,47 @@
+name: Deploy public OCI
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy jalon-1 to OCI
+    if: github.ref == 'refs/heads/jalon-1'
+    runs-on: ubuntu-latest
+    env:
+      OCI_DEPLOY_HOST: ${{ secrets.OCI_DEPLOY_HOST }}
+      OCI_DEPLOY_USER: ${{ secrets.OCI_DEPLOY_USER }}
+      OCI_DEPLOY_SSH_KEY: ${{ secrets.OCI_DEPLOY_SSH_KEY }}
+      OCI_DEPLOY_KNOWN_HOSTS: ${{ secrets.OCI_DEPLOY_KNOWN_HOSTS }}
+    steps:
+      - name: Validate deployment secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$OCI_DEPLOY_HOST"
+          test -n "$OCI_DEPLOY_USER"
+          test -n "$OCI_DEPLOY_SSH_KEY"
+          test -n "$OCI_DEPLOY_KNOWN_HOSTS"
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$OCI_DEPLOY_SSH_KEY" > "$HOME/.ssh/oci_deploy_key"
+          chmod 600 "$HOME/.ssh/oci_deploy_key"
+          printf '%s\n' "$OCI_DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+
+      - name: Deploy and run the remote smoke check
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -F /dev/null \
+            -i "$HOME/.ssh/oci_deploy_key" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$OCI_DEPLOY_USER@$OCI_DEPLOY_HOST" \
+            'bash "$HOME/Ponctuel/deploy/oci/deploy.sh"'

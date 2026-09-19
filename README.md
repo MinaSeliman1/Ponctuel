@@ -29,6 +29,17 @@ nettoie uniquement son projet Docker nommé :
 pwsh -NoProfile -File scripts/smoke.ps1
 ```
 
+## Déploiement public gratuit
+
+La démonstration complète peut être publiée gratuitement sur une VM OCI
+Always Free, car elle conserve les volumes TimescaleDB et Redpanda nécessaires
+au Compose. La procédure reproductible, le bootstrap de la VM et le workflow
+de déploiement SSH sont dans [deploy/oci/README.md](deploy/oci/README.md).
+
+Le déploiement public démarre en mode `fixture`, sans clé STM et sans service
+payant. Le mode STM réel est opt-in et sa clé reste uniquement dans le `.env`
+privé de la VM.
+
 ## Architecture
 
 ```text
