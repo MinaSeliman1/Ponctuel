@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: ponctuel-demo
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.render
+    dockerContext: .
+    healthCheckPath: /readyz
+    envVars:
+      - key: APP_ENV
+        value: fixture
+      - key: FRESHNESS_WINDOW
+        value: 720h
+      - key: POLL_INTERVAL
+        value: 30s
+      - key: DATABASE_URL
+        sync: false
+      - key: STM_API_KEY_HEADER
+        value: apikey

@@ -77,5 +77,17 @@ CREATE TABLE IF NOT EXISTS prediction_error (
         REFERENCES prediction(prediction_id, recorded_at) ON DELETE CASCADE
 );
 
-SELECT create_hypertable('vehicle_position', by_range('recorded_at'), if_not_exists => TRUE);
-SELECT create_hypertable('prediction', by_range('recorded_at'), if_not_exists => TRUE);
+-- Hypertables are an optional local optimization. Supabase PostgreSQL does
+-- not provide TimescaleDB, so the same schema remains portable there.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM pg_extension
+        WHERE extname = 'timescaledb'
+    ) THEN
+        EXECUTE 'SELECT create_hypertable(''vehicle_position'', by_range(''recorded_at''), if_not_exists => TRUE)';
+        EXECUTE 'SELECT create_hypertable(''prediction'', by_range(''recorded_at''), if_not_exists => TRUE)';
+    END IF;
+END
+$$;
