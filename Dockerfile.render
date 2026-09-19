@@ -4,8 +4,7 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api \
-    && go build -trimpath -ldflags="-s -w" -o /out/ingester ./cmd/ingester \
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o /out/render ./cmd/render \
     && go build -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migrate
 
 FROM node:26-alpine AS web-build
@@ -23,15 +22,15 @@ RUN addgroup -S ponctuel && adduser -S ponctuel -G ponctuel \
     && chown -R ponctuel:ponctuel /tmp/nginx /app
 
 WORKDIR /app
-COPY --from=go-build /out/api /app/api
-COPY --from=go-build /out/ingester /app/ingester
+COPY --from=go-build /out/render /app/render
 COPY --from=go-build /out/migrate /app/migrate
 COPY --from=web-build /app/dist /app/web
 COPY db/migrations /app/db/migrations
 COPY testdata/realtime /app/testdata/realtime
+COPY testdata/gtfs/stops.txt /app/testdata/gtfs/stops.txt
 COPY deploy/render/nginx.conf.template /app/nginx.conf.template
 COPY deploy/render/entrypoint.sh /app/entrypoint.sh
-RUN chmod 0555 /app/api /app/ingester /app/migrate /app/entrypoint.sh \
+RUN chmod 0555 /app/render /app/migrate /app/entrypoint.sh \
     && chown -R ponctuel:ponctuel /app
 
 USER ponctuel
@@ -40,6 +39,8 @@ ENV APP_ENV=fixture \
     API_HTTP_ADDR=127.0.0.1:8080 \
     INGESTER_HTTP_ADDR=127.0.0.1:8081 \
     FIXTURE_DIR=/app/testdata/realtime \
+    MATCHER_STOPS_FILE=/app/testdata/gtfs/stops.txt \
+    MATCHER_HTTP_ADDR=127.0.0.1:8082 \
     FRESHNESS_WINDOW=720h \
     POLL_INTERVAL=30s \
     MIGRATIONS_DIR=/app/db/migrations
