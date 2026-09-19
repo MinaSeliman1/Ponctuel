@@ -4,11 +4,10 @@ Ce profil publie le dashboard et l’API sur Render Free et conserve les donnée
 dans Supabase Free. Il démarre par défaut en mode `fixture`, donc aucune clé STM
 n’est nécessaire pour la première mise en ligne.
 
-Le profil public est volontairement plus léger que Compose : il ne démarre pas
-Redpanda ni le matcher, car Render Free ne fournit pas de broker persistant ni
-de disque persistant. L’ingester fixture écrit quand même les positions et les
-prédictions dans Supabase; Compose reste le profil local pour la chaîne complète
-avec Redpanda, le matcher et TimescaleDB.
+Le profil public remplace Redpanda par un bus mémoire limité au conteneur et
+démarre quand même le matcher. Les données persistantes restent dans Supabase;
+Compose reste le profil local qui démontre la variante distribuée avec Redpanda
+et TimescaleDB.
 
 ## 1. Créer Supabase
 

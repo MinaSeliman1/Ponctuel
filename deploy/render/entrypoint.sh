@@ -14,22 +14,19 @@ sed "s/__PORT__/${port}/g" /app/nginx.conf.template > /tmp/nginx.conf
 
 /app/migrate
 
-/app/ingester &
-ingester_pid=$!
-/app/api &
-api_pid=$!
+/app/render &
+render_pid=$!
 nginx -c /tmp/nginx.conf -g 'daemon off;' &
 nginx_pid=$!
 
 cleanup() {
-    kill "$nginx_pid" "$api_pid" "$ingester_pid" 2>/dev/null || true
-    wait "$nginx_pid" "$api_pid" "$ingester_pid" 2>/dev/null || true
+    kill "$nginx_pid" "$render_pid" 2>/dev/null || true
+    wait "$nginx_pid" "$render_pid" 2>/dev/null || true
 }
 trap cleanup INT TERM EXIT
 
 while kill -0 "$nginx_pid" 2>/dev/null &&
-      kill -0 "$api_pid" 2>/dev/null &&
-      kill -0 "$ingester_pid" 2>/dev/null; do
+      kill -0 "$render_pid" 2>/dev/null; do
     sleep 2
 done
 
