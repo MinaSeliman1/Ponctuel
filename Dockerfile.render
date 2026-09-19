@@ -1,0 +1,49 @@
+FROM golang:1.27.1-alpine AS go-build
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api \
+    && go build -trimpath -ldflags="-s -w" -o /out/ingester ./cmd/ingester \
+    && go build -trimpath -ldflags="-s -w" -o /out/migrate ./cmd/migrate
+
+FROM node:26-alpine AS web-build
+
+WORKDIR /app
+COPY web/package.json web/package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY web/ ./
+RUN npm run build
+
+FROM nginx:1.31-alpine
+
+RUN addgroup -S ponctuel && adduser -S ponctuel -G ponctuel \
+    && mkdir -p /tmp/nginx /app/data/raw \
+    && chown -R ponctuel:ponctuel /tmp/nginx /app
+
+WORKDIR /app
+COPY --from=go-build /out/api /app/api
+COPY --from=go-build /out/ingester /app/ingester
+COPY --from=go-build /out/migrate /app/migrate
+COPY --from=web-build /app/dist /app/web
+COPY db/migrations /app/db/migrations
+COPY testdata/realtime /app/testdata/realtime
+COPY deploy/render/nginx.conf.template /app/nginx.conf.template
+COPY deploy/render/entrypoint.sh /app/entrypoint.sh
+RUN chmod 0555 /app/api /app/ingester /app/migrate /app/entrypoint.sh \
+    && chown -R ponctuel:ponctuel /app
+
+USER ponctuel
+
+ENV APP_ENV=fixture \
+    API_HTTP_ADDR=127.0.0.1:8080 \
+    INGESTER_HTTP_ADDR=127.0.0.1:8081 \
+    FIXTURE_DIR=/app/testdata/realtime \
+    FRESHNESS_WINDOW=720h \
+    POLL_INTERVAL=30s \
+    MIGRATIONS_DIR=/app/db/migrations
+
+EXPOSE 10000
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=12 CMD wget -qO- "http://127.0.0.1:$${PORT:-10000}/readyz" >/dev/null || exit 1
+ENTRYPOINT ["/app/entrypoint.sh"]

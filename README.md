@@ -171,6 +171,15 @@ configure localement `APP_ENV=stm` et `STM_API_KEY`. La clé reste côté
 ingester et n’est jamais envoyée au navigateur ou incluse dans une image web.
 Ne committe jamais `.env`, une clé, un payload réel ou des données personnelles.
 
+## Déploiement public gratuit
+
+Un profil Render + Supabase est disponible dans
+[deploy/render/README.md](deploy/render/README.md). Il démarre en mode fixture
+et conserve les données dans Supabase; aucun service payant ni clé STM n’est
+nécessaire pour la première mise en ligne. Le profil Compose reste la
+démonstration locale de la chaîne complète avec Redpanda, le matcher et
+TimescaleDB.
+
 ## GTFS statique et attribution
 
 Télécharge une archive après avoir vérifié son empreinte, puis importe-la dans
