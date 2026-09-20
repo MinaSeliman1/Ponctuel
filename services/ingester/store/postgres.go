@@ -29,16 +29,29 @@ type Repository interface {
 type PostgresRepository struct {
 	pool            *pgxpool.Pool
 	freshnessWindow time.Duration
+	sourceMode      string
 }
 
 func NewPostgresRepository(pool *pgxpool.Pool, freshnessWindow time.Duration) *PostgresRepository {
+	return NewPostgresRepositoryWithSourceMode(pool, freshnessWindow, "fixture")
+}
+
+func NewPostgresRepositoryWithSourceMode(pool *pgxpool.Pool, freshnessWindow time.Duration, sourceMode string) *PostgresRepository {
 	if freshnessWindow <= 0 {
 		freshnessWindow = defaultFreshnessWindow
 	}
-	return &PostgresRepository{pool: pool, freshnessWindow: freshnessWindow}
+	mode := strings.ToLower(strings.TrimSpace(sourceMode))
+	if mode != "stm" {
+		mode = "fixture"
+	}
+	return &PostgresRepository{pool: pool, freshnessWindow: freshnessWindow, sourceMode: mode}
 }
 
 func Connect(ctx context.Context, databaseURL string, freshnessWindow time.Duration) (*PostgresRepository, error) {
+	return ConnectWithSourceMode(ctx, databaseURL, freshnessWindow, "fixture")
+}
+
+func ConnectWithSourceMode(ctx context.Context, databaseURL string, freshnessWindow time.Duration, sourceMode string) (*PostgresRepository, error) {
 	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("connect PostgreSQL: %w", err)
@@ -47,7 +60,7 @@ func Connect(ctx context.Context, databaseURL string, freshnessWindow time.Durat
 		pool.Close()
 		return nil, fmt.Errorf("ping PostgreSQL: %w", err)
 	}
-	return NewPostgresRepository(pool, freshnessWindow), nil
+	return NewPostgresRepositoryWithSourceMode(pool, freshnessWindow, sourceMode), nil
 }
 
 func (r *PostgresRepository) Close() {
@@ -76,6 +89,13 @@ func (r *PostgresRepository) InsertSnapshot(ctx context.Context, snapshot domain
 	if snapshot.PayloadHash == "" {
 		return 0, false, fmt.Errorf("insert snapshot: payload_hash is required")
 	}
+	sourceMode := strings.ToLower(strings.TrimSpace(snapshot.SourceMode))
+	if sourceMode == "" {
+		sourceMode = r.sourceMode
+	}
+	if sourceMode != "stm" && sourceMode != "fixture" {
+		return 0, false, fmt.Errorf("insert snapshot: unsupported source mode %q", sourceMode)
+	}
 
 	var sourceTimestamp any
 	if !snapshot.SourceTimestamp.IsZero() {
@@ -83,11 +103,11 @@ func (r *PostgresRepository) InsertSnapshot(ctx context.Context, snapshot domain
 	}
 	var snapshotID int64
 	err := r.pool.QueryRow(ctx, `
-		INSERT INTO feed_snapshot (feed_type, recorded_at, source_timestamp, payload_hash)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO feed_snapshot (feed_type, source_mode, recorded_at, source_timestamp, payload_hash)
+		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (feed_type, payload_hash) DO NOTHING
 		RETURNING snapshot_id
-	`, string(snapshot.FeedType), snapshot.RecordedAt, sourceTimestamp, snapshot.PayloadHash).Scan(&snapshotID)
+	`, string(snapshot.FeedType), sourceMode, snapshot.RecordedAt, sourceTimestamp, snapshot.PayloadHash).Scan(&snapshotID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, false, nil
 	}
@@ -168,9 +188,16 @@ func (r *PostgresRepository) CountEvents(ctx context.Context) (int64, error) {
 	}
 	var count int64
 	err := r.pool.QueryRow(ctx, `
-		SELECT (SELECT count(*) FROM vehicle_position) +
-		       (SELECT count(*) FROM prediction)
-	`).Scan(&count)
+		SELECT
+			(SELECT count(*)
+			 FROM vehicle_position
+			 JOIN feed_snapshot ON feed_snapshot.snapshot_id = vehicle_position.snapshot_id
+			 WHERE feed_snapshot.source_mode = $1) +
+			(SELECT count(*)
+			 FROM prediction
+			 JOIN feed_snapshot ON feed_snapshot.snapshot_id = prediction.snapshot_id
+			 WHERE feed_snapshot.source_mode = $1)
+	`, r.sourceMode).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("count events: %w", err)
 	}
@@ -182,7 +209,7 @@ func (r *PostgresRepository) LatestSnapshotAt(ctx context.Context) (time.Time, e
 		return time.Time{}, fmt.Errorf("PostgreSQL repository is not initialized")
 	}
 	var latest *time.Time
-	if err := r.pool.QueryRow(ctx, `SELECT max(recorded_at) FROM feed_snapshot`).Scan(&latest); err != nil {
+	if err := r.pool.QueryRow(ctx, `SELECT max(recorded_at) FROM feed_snapshot WHERE source_mode = $1`, r.sourceMode).Scan(&latest); err != nil {
 		return time.Time{}, fmt.Errorf("load latest snapshot: %w", err)
 	}
 	if latest == nil {
@@ -197,11 +224,39 @@ func (r *PostgresRepository) LatestVehicles(ctx context.Context) ([]domain.Vehic
 	}
 	cutoff := time.Now().UTC().Add(-r.freshnessWindow)
 	rows, err := r.pool.Query(ctx, `
-		SELECT vehicle_id, route_id, trip_id, latitude, longitude, recorded_at, delay_seconds
-		FROM latest_vehicle_positions
-		WHERE recorded_at >= $1
-		ORDER BY recorded_at DESC, vehicle_id
-	`, cutoff)
+		SELECT
+			vehicle.vehicle_id,
+			vehicle.route_id,
+			vehicle.trip_id,
+			vehicle.latitude,
+			vehicle.longitude,
+			vehicle.recorded_at,
+			COALESCE(vehicle.delay_seconds, trip_prediction.delay_seconds) AS delay_seconds
+		FROM latest_vehicle_positions AS vehicle
+		JOIN feed_snapshot AS snapshot ON snapshot.snapshot_id = vehicle.snapshot_id
+		LEFT JOIN LATERAL (
+			SELECT prediction.delay_seconds
+			FROM prediction
+			WHERE prediction.delay_seconds IS NOT NULL
+			  AND prediction.recorded_at BETWEEN vehicle.recorded_at - INTERVAL '5 minutes'
+			                                AND vehicle.recorded_at + INTERVAL '5 minutes'
+			  AND (
+				prediction.trip_id = vehicle.trip_id
+				OR prediction.vehicle_id = vehicle.vehicle_id
+			  )
+			ORDER BY
+			  CASE WHEN prediction.trip_id = vehicle.trip_id THEN 0 ELSE 1 END,
+			  prediction.recorded_at DESC,
+			  CASE WHEN prediction.predicted_at >= CURRENT_TIMESTAMP THEN 0 ELSE 1 END,
+			  CASE WHEN prediction.predicted_at >= CURRENT_TIMESTAMP THEN prediction.predicted_at END ASC NULLS LAST,
+			  CASE WHEN prediction.predicted_at < CURRENT_TIMESTAMP THEN prediction.predicted_at END DESC NULLS LAST,
+			  prediction.prediction_id DESC
+			LIMIT 1
+		) AS trip_prediction ON TRUE
+		WHERE vehicle.recorded_at >= $1
+		  AND snapshot.source_mode = $2
+		ORDER BY vehicle.recorded_at DESC, vehicle.vehicle_id
+	`, cutoff, r.sourceMode)
 	if err != nil {
 		return nil, fmt.Errorf("query latest vehicles: %w", err)
 	}
@@ -338,10 +393,13 @@ func (r *PostgresRepository) ErrorSummary(ctx context.Context, limit int) ([]dom
 		JOIN prediction
 		  ON prediction.prediction_id = prediction_error.prediction_id
 		 AND prediction.recorded_at = prediction_error.prediction_recorded_at
+		JOIN feed_snapshot
+		  ON feed_snapshot.snapshot_id = prediction.snapshot_id
+		WHERE feed_snapshot.source_mode = $2
 		GROUP BY COALESCE(prediction.route_id, ''), horizon_seconds
 		ORDER BY horizon_seconds, COALESCE(prediction.route_id, '')
 		LIMIT $1
-	`, limit)
+	`, limit, r.sourceMode)
 	if err != nil {
 		return nil, fmt.Errorf("query prediction error summary: %w", err)
 	}

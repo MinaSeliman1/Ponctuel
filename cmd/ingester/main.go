@@ -26,7 +26,7 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	repository, err := store.Connect(ctx, cfg.DatabaseURL, cfg.FreshnessWindow)
+	repository, err := store.ConnectWithSourceMode(ctx, cfg.DatabaseURL, cfg.FreshnessWindow, cfg.AppEnv)
 	if err != nil {
 		log.Fatal(err)
 	}
