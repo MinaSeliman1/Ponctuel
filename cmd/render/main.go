@@ -34,6 +34,15 @@ func main() {
 		log.Fatal(err)
 	}
 	defer repository.Close()
+	if cfg.AppEnv == "stm" {
+		imported, err := repository.EnsureStaticSchedule(ctx, cfg.MatcherStopsURL)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if imported {
+			log.Printf("imported STM static schedule for realtime delay calculation")
+		}
+	}
 
 	messageBus := bus.NewMemoryBus(1024)
 	defer messageBus.Close()

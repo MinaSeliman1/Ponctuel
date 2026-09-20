@@ -2,6 +2,20 @@
 
 ## Ce qui est mesuré
 
+### Retard affiché en temps réel
+
+Pour une prédiction GTFS-Realtime, Ponctuel utilise `StopTimeEvent.delay`
+quand le champ est fourni. Si le feed fournit uniquement une heure absolue,
+le retard est dérivé contre `stop_times.txt` :
+
+```text
+retard_secondes = heure_prévue_realtime - heure_planifiée_GTFS
+```
+
+Le calcul utilise le fuseau `America/Toronto` et conserve les horaires GTFS
+au-delà de minuit (par exemple `25:10:00`). Une absence d’horaire correspondant
+reste explicitement « non disponible »; elle n’est jamais transformée en zéro.
+
 Ponctuel relie une arrivée observée à toutes les prédictions déjà persistées
 pour le même trajet, la même date de service et le même arrêt. Pour chaque
 liaison :

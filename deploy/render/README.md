@@ -27,7 +27,7 @@ disponible localement.
 1. Dans Render, ouvre `New > Blueprint` et sélectionne le dépôt public.
 2. Render détecte `render.yaml` et crée `ponctuel-demo` sur le plan Free.
 3. Dans les variables demandées, colle la valeur `DATABASE_URL` de Supabase.
-4. Laisse `APP_ENV=fixture` pour la première mise en ligne, puis lance le déploiement.
+4. Renseigne `STM_API_KEY` comme secret et laisse `APP_ENV=stm` pour la mise en ligne publique.
 5. Ouvre l’URL `https://ponctuel-demo.onrender.com` affichée par Render.
 
 La première ouverture peut prendre environ une minute après une période
@@ -36,14 +36,13 @@ trafic. Les données restent dans Supabase; le disque local Render est éphémè
 
 ## 3. Activer les données STM réelles (optionnel)
 
-Dans les variables d’environnement Render, ajoute la clé STM comme `STM_API_KEY`
-et change `APP_ENV` en `stm`. La clé reste côté serveur et n’est jamais envoyée
-au navigateur. Le service utilise `STM_API_KEY_HEADER=apikey` par défaut.
-Le matcher récupère automatiquement les coordonnées `stops.txt` du GTFS statique
-STM lorsque Supabase ne contient pas encore d’arrêts. Les positions sont alors
-enrichies avec le retard du `TripUpdates` correspondant au même trajet ou
-véhicule; le panneau de qualité se remplit progressivement après des arrivées
-observées.
+Dans les variables d’environnement Render, la clé STM est déclarée comme secret
+`STM_API_KEY`. Elle reste côté serveur et n’est jamais envoyée au navigateur.
+Le service utilise `STM_API_KEY_HEADER=apikey` par défaut, importe le GTFS
+statique STM si Supabase ne contient encore aucun horaire, puis calcule le
+retard comme l’écart entre l’heure prédite et l’heure planifiée pour le même
+trajet et le même arrêt. Les positions sont ensuite enrichies avec ce retard;
+le panneau de qualité se remplit progressivement après des arrivées observées.
 
 ## Vérification
 

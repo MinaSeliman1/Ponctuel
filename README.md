@@ -60,6 +60,9 @@ GTFS-Realtime fixture ou STM
 ```
 
 - `services/ingester` décode, normalise et déduplique les snapshots protobuf.
+- Les retards sont conservés depuis `TripUpdates.delay` lorsqu’il est fourni;
+  sinon ils sont calculés comme `heure prédite - heure planifiée` à partir du
+  GTFS statique STM, dans le fuseau `America/Toronto`.
 - `services/bus` publie les événements versionnés dans `trip-updates` et
   `vehicle-positions`; `services/matcher` compare `last_update` et `geofence`
   et expose ses métriques Prometheus.
@@ -174,6 +177,10 @@ Le mode réel est volontairement opt-in. Copie `.env.example` vers `.env`, puis
 configure localement `APP_ENV=stm` et `STM_API_KEY`. La clé reste côté
 ingester et n’est jamais envoyée au navigateur ou incluse dans une image web.
 Ne committe jamais `.env`, une clé, un payload réel ou des données personnelles.
+En mode STM, le service public importe automatiquement le GTFS statique dans
+Supabase lorsqu’aucun horaire n’est encore présent; cet horaire permet de
+calculer les retards même lorsque le feed temps réel fournit seulement une
+heure d’arrivée prévue.
 
 ## Déploiement public gratuit
 
