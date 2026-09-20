@@ -119,6 +119,7 @@ func (r *Runner) collectOnce(ctx context.Context) error {
 			collectedErrors = append(collectedErrors, fmt.Errorf("normalize %s: %w", feedType, err))
 			continue
 		}
+		snapshot.SourceMode = r.config.AppEnv
 		snapshotID, inserted, err := r.repository.InsertSnapshot(ctx, snapshot)
 		if err != nil {
 			collectedErrors = append(collectedErrors, fmt.Errorf("store %s snapshot: %w", feedType, err))

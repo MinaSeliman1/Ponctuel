@@ -148,7 +148,7 @@ func TestPostgresRepositoryContract(t *testing.T) {
 			Kind:       domain.EventKindVehiclePosition,
 			EntityID:   "vehicle-fresh",
 			RecordedAt: now,
-			VehicleID:  "bus-fresh",
+			VehicleID:  "bus-1",
 			TripID:     "trip-1",
 			RouteID:    "51",
 			Latitude:   45.5017,
@@ -176,8 +176,86 @@ func TestPostgresRepositoryContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(vehicles) != 1 || vehicles[0].VehicleID != "bus-fresh" {
-		t.Fatalf("latest vehicles = %+v, want only bus-fresh", vehicles)
+	if len(vehicles) != 1 || vehicles[0].VehicleID != "bus-1" {
+		t.Fatalf("latest vehicles = %+v, want only bus-1", vehicles)
+	}
+	if !vehicles[0].HasDelay || vehicles[0].DelaySeconds != -90 {
+		t.Fatalf("latest vehicle delay = %+v, want -90 seconds from matching trip update", vehicles[0])
+	}
+}
+
+func TestPostgresRepositoryScopesDataToConfiguredSourceMode(t *testing.T) {
+	databaseURL := os.Getenv("TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("TEST_DATABASE_URL is not set")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	pool, err := pgxpool.New(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		t.Fatal(err)
+	}
+	applyTestMigrations(t, ctx, pool)
+	resetTestData(t, ctx, pool)
+
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	fixtureRepository := NewPostgresRepositoryWithSourceMode(pool, 2*time.Minute, "fixture")
+	stmRepository := NewPostgresRepositoryWithSourceMode(pool, 2*time.Minute, "stm")
+	snapshotIDs := make(map[string]int64, 2)
+	for _, snapshot := range []domain.FeedSnapshot{
+		{FeedType: domain.FeedTypeVehiclePositions, RecordedAt: now, PayloadHash: domain.HashPayload([]byte("fixture-source")), SourceMode: "fixture"},
+		{FeedType: domain.FeedTypeVehiclePositions, RecordedAt: now.Add(time.Second), PayloadHash: domain.HashPayload([]byte("stm-source")), SourceMode: "stm"},
+	} {
+		repository := fixtureRepository
+		if snapshot.SourceMode == "stm" {
+			repository = stmRepository
+		}
+		snapshotID, inserted, insertErr := repository.InsertSnapshot(ctx, snapshot)
+		if insertErr != nil || !inserted {
+			t.Fatalf("insert source snapshot %q = inserted %t, err %v", snapshot.SourceMode, inserted, insertErr)
+		}
+		snapshotIDs[snapshot.SourceMode] = snapshotID
+	}
+	for mode, repository := range map[string]*PostgresRepository{"fixture": fixtureRepository, "stm": stmRepository} {
+		if _, err := repository.InsertEvents(ctx, snapshotIDs[mode], []domain.Event{{
+			Kind:       domain.EventKindVehiclePosition,
+			EntityID:   mode + "-vehicle",
+			RecordedAt: now,
+			VehicleID:  mode + "-vehicle",
+			Latitude:   45.5017,
+			Longitude:  -73.5673,
+		}}); err != nil {
+			t.Fatalf("insert %s source event: %v", mode, err)
+		}
+	}
+
+	fixtureCount, err := fixtureRepository.CountEvents(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stmCount, err := stmRepository.CountEvents(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fixtureCount != 1 || stmCount != 1 {
+		t.Fatalf("source counts = fixture %d, stm %d; want one event per mode", fixtureCount, stmCount)
+	}
+
+	fixtureLatest, err := fixtureRepository.LatestSnapshotAt(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stmLatest, err := stmRepository.LatestSnapshotAt(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fixtureLatest.IsZero() || stmLatest.IsZero() || !stmLatest.After(fixtureLatest) {
+		t.Fatalf("source latest timestamps = fixture %v, stm %v; want separate non-zero values", fixtureLatest, stmLatest)
 	}
 }
 
@@ -202,8 +280,8 @@ func applyTestMigrations(t *testing.T, ctx context.Context, pool *pgxpool.Pool) 
 		t.Fatal(err)
 	}
 	sort.Strings(migrationPaths)
-	if len(migrationPaths) != 6 {
-		t.Fatalf("migration count = %d, want 6", len(migrationPaths))
+	if len(migrationPaths) != 7 {
+		t.Fatalf("migration count = %d, want 7", len(migrationPaths))
 	}
 	for _, migrationPath := range migrationPaths {
 		migration, err := os.ReadFile(migrationPath)

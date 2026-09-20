@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -61,6 +62,13 @@ func (s *Service) Run(ctx context.Context) error {
 		stops, err = loadStopsFile(s.config.MatcherStopsFile)
 		if err != nil {
 			return err
+		}
+	}
+	if len(stops) == 0 && s.config.MatcherStopsURL != "" {
+		stops, err = loadStopsURL(ctx, s.config.MatcherStopsURL)
+		if err != nil {
+			log.Printf("matcher: static GTFS stops unavailable: %v", err)
+			stops = nil
 		}
 	}
 	s.stops = stops

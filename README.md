@@ -63,6 +63,10 @@ GTFS-Realtime fixture ou STM
 - `services/bus` publie les événements versionnés dans `trip-updates` et
   `vehicle-positions`; `services/matcher` compare `last_update` et `geofence`
   et expose ses métriques Prometheus.
+- Les positions sont enrichies avec le retard du `TripUpdates` le plus récent
+  pour le même trajet ou véhicule. En mode STM, le matcher charge aussi les
+  coordonnées des arrêts du GTFS statique pour observer les arrivées par
+  géorepérage.
 - `db/migrations` crée les tables TimescaleDB, les contraintes et la vue des
   dernières positions.
 - `services/api` expose uniquement les champs nécessaires au dashboard, avec

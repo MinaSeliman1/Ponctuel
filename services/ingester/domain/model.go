@@ -27,6 +27,7 @@ const (
 
 type FeedSnapshot struct {
 	FeedType        FeedType
+	SourceMode      string
 	RecordedAt      time.Time
 	SourceTimestamp time.Time
 	PayloadHash     string

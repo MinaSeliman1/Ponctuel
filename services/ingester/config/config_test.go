@@ -49,6 +49,19 @@ func TestLoadSTMModeRequiresAPIKey(t *testing.T) {
 	}
 }
 
+func TestLoadSTMModeDefaultsToOfficialStaticGTFSStops(t *testing.T) {
+	cfg, err := LoadFrom(testEnvironment(map[string]string{
+		"APP_ENV":     "stm",
+		"STM_API_KEY": "test-key",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MatcherStopsURL != "https://www.stm.info/sites/default/files/gtfs/gtfs_stm.zip" {
+		t.Fatalf("matcher stops URL = %q, want official STM static GTFS URL", cfg.MatcherStopsURL)
+	}
+}
+
 func TestLoadRejectsInvalidPollInterval(t *testing.T) {
 	_, err := LoadFrom(testEnvironment(map[string]string{
 		"POLL_INTERVAL": "not-a-duration",

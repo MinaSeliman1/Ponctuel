@@ -37,6 +37,11 @@ trafic. Les données restent dans Supabase; le disque local Render est éphémè
 Dans les variables d’environnement Render, ajoute la clé STM comme `STM_API_KEY`
 et change `APP_ENV` en `stm`. La clé reste côté serveur et n’est jamais envoyée
 au navigateur. Le service utilise `STM_API_KEY_HEADER=apikey` par défaut.
+Le matcher récupère automatiquement les coordonnées `stops.txt` du GTFS statique
+STM lorsque Supabase ne contient pas encore d’arrêts. Les positions sont alors
+enrichies avec le retard du `TripUpdates` correspondant au même trajet ou
+véhicule; le panneau de qualité se remplit progressivement après des arrivées
+observées.
 
 ## Vérification
 

@@ -7,7 +7,8 @@ SELECT DISTINCT ON (vehicle_id)
     latitude,
     longitude,
     recorded_at,
-    delay_seconds
+    delay_seconds,
+    snapshot_id
 FROM vehicle_position
 ORDER BY vehicle_id, recorded_at DESC, event_id DESC;
 

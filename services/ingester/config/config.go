@@ -23,6 +23,7 @@ const (
 	defaultRedpandaGroupID  = "ponctuel-matcher"
 	defaultGeofenceRadius   = 60.0
 	defaultMatcherHTTPAddr  = ":8082"
+	defaultMatcherStopsURL  = "https://www.stm.info/sites/default/files/gtfs/gtfs_stm.zip"
 )
 
 type Config struct {
@@ -42,6 +43,7 @@ type Config struct {
 	GeofenceRadiusMeters float64
 	MatcherHTTPAddr      string
 	MatcherStopsFile     string
+	MatcherStopsURL      string
 }
 
 func Load() (Config, error) {
@@ -67,6 +69,10 @@ func LoadFrom(lookup func(string) (string, bool)) (Config, error) {
 		RedpandaGroupID:   valueOr(lookup, "REDPANDA_GROUP_ID", defaultRedpandaGroupID),
 		MatcherHTTPAddr:   valueOr(lookup, "MATCHER_HTTP_ADDR", defaultMatcherHTTPAddr),
 		MatcherStopsFile:  valueOr(lookup, "MATCHER_STOPS_FILE", ""),
+		MatcherStopsURL:   valueOr(lookup, "MATCHER_STOPS_URL", ""),
+	}
+	if cfg.AppEnv == "stm" && strings.TrimSpace(cfg.MatcherStopsURL) == "" {
+		cfg.MatcherStopsURL = defaultMatcherStopsURL
 	}
 
 	var err error
@@ -120,6 +126,11 @@ func (c Config) Validate() error {
 	}
 	if err := validateURL("STM_VEHICLE_POSITIONS_URL", c.STMVehicleURL); err != nil {
 		return err
+	}
+	if strings.TrimSpace(c.MatcherStopsURL) != "" {
+		if err := validateURL("MATCHER_STOPS_URL", c.MatcherStopsURL); err != nil {
+			return err
+		}
 	}
 	if strings.EqualFold(strings.TrimSpace(c.AppEnv), "stm") && strings.TrimSpace(c.STMAPIKey) == "" {
 		return fmt.Errorf("STM_API_KEY is required when APP_ENV=stm")
