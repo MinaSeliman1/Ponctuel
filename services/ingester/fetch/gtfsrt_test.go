@@ -85,6 +85,32 @@ func TestFetcherSendsConfiguredAPIKeyHeader(t *testing.T) {
 	}
 }
 
+func TestFetcherAppliesDefaultTimeoutToUpstreamRequests(t *testing.T) {
+	fetcher := New(Config{
+		Mode:           "stm",
+		TripUpdatesURL: "https://stm.example.test/trip-updates",
+		Client:         &http.Client{Transport: deadlineCheckingRoundTripper{}},
+	})
+
+	_, err := fetcher.Fetch(context.Background(), domain.FeedTypeTripUpdates)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("fetch error = %v, want context deadline exceeded after applying the default timeout", err)
+	}
+}
+
+type deadlineCheckingRoundTripper struct{}
+
+func (deadlineCheckingRoundTripper) RoundTrip(request *http.Request) (*http.Response, error) {
+	deadline, ok := request.Context().Deadline()
+	if !ok {
+		return nil, errors.New("request has no deadline")
+	}
+	if remaining := time.Until(deadline); remaining <= 0 || remaining > 30*time.Second {
+		return nil, errors.New("request deadline is outside the expected default timeout")
+	}
+	return nil, context.DeadlineExceeded
+}
+
 func TestDecodeRejectsMalformedProtobuf(t *testing.T) {
 	if _, err := Decode([]byte{0xff, 0x00, 0x01}, time.Now().UTC(), domain.FeedTypeTripUpdates); err == nil {
 		t.Fatal("Decode returned nil error for malformed protobuf")
