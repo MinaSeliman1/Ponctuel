@@ -205,10 +205,15 @@ func deriveScheduleDelay(ctx context.Context, transaction pgx.Tx, event domain.E
 			JOIN gtfs_feed_version AS feed_version
 			  ON feed_version.feed_version = stop_time.feed_version
 			WHERE stop_time.trip_id = $2
-			  AND stop_time.stop_id = $3
-			  AND ($4::integer = 0 OR stop_time.stop_sequence = $4::integer)
+			  AND (
+				(stop_time.stop_id = $3 AND ($4::integer = 0 OR stop_time.stop_sequence = $4::integer))
+				OR ($4::integer > 0 AND stop_time.stop_sequence = $4::integer)
+			  )
 			  AND COALESCE(stop_time.arrival_seconds, stop_time.departure_seconds) IS NOT NULL
-			ORDER BY feed_version.retrieved_at DESC, feed_version.feed_version DESC
+			ORDER BY
+				CASE WHEN stop_time.stop_id = $3 THEN 0 ELSE 1 END,
+				feed_version.retrieved_at DESC,
+				feed_version.feed_version DESC
 			LIMIT 1
 		)
 		SELECT EXTRACT(EPOCH FROM ($1::timestamptz - scheduled_at))::integer

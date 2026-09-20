@@ -388,13 +388,15 @@ func TestPostgresRepositoryDerivesDelayFromStaticSchedule(t *testing.T) {
 		t.Fatalf("prediction snapshot = id %d, inserted %t, err %v", snapshotID, inserted, err)
 	}
 	if _, err := repository.InsertEvents(ctx, snapshotID, []domain.Event{{
-		Kind:         domain.EventKindPrediction,
-		EntityID:     "trip-schedule-entity",
-		RecordedAt:   recordedAt,
-		VehicleID:    "bus-schedule",
-		TripID:       "trip-schedule",
-		RouteID:      "51",
-		StopID:       "stop-schedule",
+		Kind:       domain.EventKindPrediction,
+		EntityID:   "trip-schedule-entity",
+		RecordedAt: recordedAt,
+		VehicleID:  "bus-schedule",
+		TripID:     "trip-schedule",
+		RouteID:    "51",
+		// The realtime feed can identify a stop by sequence when its stop_id
+		// spelling differs from the static feed.
+		StopID:       "stop-realtime",
 		StopSequence: 7,
 		PredictedAt:  recordedAt,
 	}}); err != nil {
