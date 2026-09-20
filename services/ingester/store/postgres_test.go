@@ -394,11 +394,10 @@ func TestPostgresRepositoryDerivesDelayFromStaticSchedule(t *testing.T) {
 		VehicleID:  "bus-schedule",
 		TripID:     "trip-schedule",
 		RouteID:    "51",
-		// The realtime feed can identify a stop by sequence when its stop_id
-		// spelling differs from the static feed.
-		StopID:       "stop-realtime",
-		StopSequence: 7,
-		PredictedAt:  recordedAt,
+		// The realtime feed can omit both identifiers that exactly match the
+		// static feed; the nearest scheduled stop is the safe final fallback.
+		StopID:      "stop-realtime",
+		PredictedAt: recordedAt,
 	}}); err != nil {
 		t.Fatal(err)
 	}
