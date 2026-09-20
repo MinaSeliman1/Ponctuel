@@ -1,7 +1,11 @@
 package store
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"sort"
@@ -333,6 +337,171 @@ func TestLatestVehiclesMatchesFreshPredictionForStaleVehiclePosition(t *testing.
 	if len(vehicles) != 1 || !vehicles[0].HasDelay || vehicles[0].DelaySeconds != 180 {
 		t.Fatalf("latest vehicles = %+v, want stale position enriched with fresh +180 second prediction", vehicles)
 	}
+}
+
+func TestPostgresRepositoryDerivesDelayFromStaticSchedule(t *testing.T) {
+	databaseURL := os.Getenv("TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("TEST_DATABASE_URL is not set")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	pool, err := pgxpool.New(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		t.Fatal(err)
+	}
+	applyTestMigrations(t, ctx, pool)
+	resetTestData(t, ctx, pool)
+	if _, err := pool.Exec(ctx, `TRUNCATE gtfs_feed_version CASCADE`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO gtfs_feed_version (feed_version, source_url) VALUES ('test-schedule', 'https://example.test/gtfs.zip');
+		INSERT INTO gtfs_trip (feed_version, trip_id, route_id) VALUES ('test-schedule', 'trip-schedule', '51');
+		INSERT INTO gtfs_stop (feed_version, stop_id, stop_name, stop_lat, stop_lon) VALUES ('test-schedule', 'stop-schedule', 'Test stop', 45.5, -73.5);
+		INSERT INTO gtfs_stop_time (feed_version, trip_id, stop_sequence, stop_id, arrival_seconds)
+		VALUES ('test-schedule', 'trip-schedule', 7, 'stop-schedule', 15 * 60 * 60 + 5 * 60)
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	repository := NewPostgresRepositoryWithSourceMode(pool, 48*time.Hour, "stm")
+	montreal, err := time.LoadLocation("America/Toronto")
+	if err != nil {
+		t.Fatal(err)
+	}
+	today := time.Now().In(montreal)
+	recordedAt := time.Date(today.Year(), today.Month(), today.Day(), 15, 15, 0, 0, montreal).UTC()
+	snapshot := domain.FeedSnapshot{
+		FeedType:    domain.FeedTypeTripUpdates,
+		SourceMode:  "stm",
+		RecordedAt:  recordedAt,
+		PayloadHash: domain.HashPayload([]byte("schedule-delay-prediction")),
+	}
+	snapshotID, inserted, err := repository.InsertSnapshot(ctx, snapshot)
+	if err != nil || !inserted {
+		t.Fatalf("prediction snapshot = id %d, inserted %t, err %v", snapshotID, inserted, err)
+	}
+	if _, err := repository.InsertEvents(ctx, snapshotID, []domain.Event{{
+		Kind:         domain.EventKindPrediction,
+		EntityID:     "trip-schedule-entity",
+		RecordedAt:   recordedAt,
+		VehicleID:    "bus-schedule",
+		TripID:       "trip-schedule",
+		RouteID:      "51",
+		StopID:       "stop-schedule",
+		StopSequence: 7,
+		PredictedAt:  recordedAt,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	vehicleSnapshot := domain.FeedSnapshot{
+		FeedType:    domain.FeedTypeVehiclePositions,
+		SourceMode:  "stm",
+		RecordedAt:  recordedAt.Add(30 * time.Second),
+		PayloadHash: domain.HashPayload([]byte("schedule-delay-vehicle")),
+	}
+	vehicleSnapshotID, inserted, err := repository.InsertSnapshot(ctx, vehicleSnapshot)
+	if err != nil || !inserted {
+		t.Fatalf("vehicle snapshot = id %d, inserted %t, err %v", vehicleSnapshotID, inserted, err)
+	}
+	if _, err := repository.InsertEvents(ctx, vehicleSnapshotID, []domain.Event{{
+		Kind:       domain.EventKindVehiclePosition,
+		EntityID:   "vehicle-schedule-entity",
+		RecordedAt: recordedAt.Add(30 * time.Second),
+		VehicleID:  "bus-schedule",
+		TripID:     "trip-schedule",
+		RouteID:    "51",
+		Latitude:   45.5,
+		Longitude:  -73.5,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	vehicles, err := repository.LatestVehicles(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(vehicles) != 1 || !vehicles[0].HasDelay || vehicles[0].DelaySeconds != 600 {
+		t.Fatalf("latest vehicles = %+v, want bus-schedule with a derived +600 second delay", vehicles)
+	}
+}
+
+func TestEnsureStaticScheduleImportsOnceFromConfiguredURL(t *testing.T) {
+	databaseURL := os.Getenv("TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("TEST_DATABASE_URL is not set")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	pool, err := pgxpool.New(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		t.Fatal(err)
+	}
+	applyTestMigrations(t, ctx, pool)
+	resetTestData(t, ctx, pool)
+	if _, err := pool.Exec(ctx, `TRUNCATE gtfs_feed_version CASCADE`); err != nil {
+		t.Fatal(err)
+	}
+
+	archive := testStaticScheduleArchive(t)
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		w.Header().Set("Content-Type", "application/zip")
+		_, _ = w.Write(archive)
+	}))
+	defer server.Close()
+
+	repository := NewPostgresRepositoryWithSourceMode(pool, 2*time.Minute, "stm")
+	imported, err := repository.EnsureStaticSchedule(ctx, server.URL)
+	if err != nil || !imported {
+		t.Fatalf("first static schedule import = imported %t, err %v; want true, nil", imported, err)
+	}
+	imported, err = repository.EnsureStaticSchedule(ctx, server.URL)
+	if err != nil || imported {
+		t.Fatalf("second static schedule import = imported %t, err %v; want false, nil", imported, err)
+	}
+	if requests != 1 {
+		t.Fatalf("static schedule requests = %d, want 1", requests)
+	}
+}
+
+func testStaticScheduleArchive(t *testing.T) []byte {
+	t.Helper()
+	files := map[string]string{
+		"agency.txt":     "agency_id,agency_name,agency_timezone\na1,STM,America/Toronto\n",
+		"routes.txt":     "route_id,agency_id,route_short_name,route_type\n51,a1,51,3\n",
+		"trips.txt":      "route_id,service_id,trip_id\n51,weekday,trip-schedule\n",
+		"stops.txt":      "stop_id,stop_name,stop_lat,stop_lon\nstop-schedule,Test stop,45.5,-73.5\n",
+		"stop_times.txt": "trip_id,stop_id,stop_sequence,arrival_time,departure_time\ntrip-schedule,stop-schedule,7,15:05:00,15:06:00\n",
+	}
+	var buffer bytes.Buffer
+	writer := zip.NewWriter(&buffer)
+	for name, contents := range files {
+		entry, err := writer.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := entry.Write([]byte(contents)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buffer.Bytes()
 }
 
 func resetTestData(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
