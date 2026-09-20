@@ -16,7 +16,10 @@ import (
 	"ponctuel/services/ingester/domain"
 )
 
-const defaultMaxPayloadBytes int64 = 16 << 20
+const (
+	defaultMaxPayloadBytes int64         = 16 << 20
+	defaultTimeout         time.Duration = 20 * time.Second
+)
 
 var (
 	ErrUnauthorized = errors.New("upstream authorization failed")
@@ -101,6 +104,9 @@ func New(config Config) *Fetcher {
 	}
 	if config.MaxPayloadBytes <= 0 {
 		config.MaxPayloadBytes = defaultMaxPayloadBytes
+	}
+	if config.Timeout <= 0 {
+		config.Timeout = defaultTimeout
 	}
 	return &Fetcher{config: config}
 }
