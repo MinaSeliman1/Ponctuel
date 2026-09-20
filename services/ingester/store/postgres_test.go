@@ -259,6 +259,82 @@ func TestPostgresRepositoryScopesDataToConfiguredSourceMode(t *testing.T) {
 	}
 }
 
+func TestLatestVehiclesMatchesFreshPredictionForStaleVehiclePosition(t *testing.T) {
+	databaseURL := os.Getenv("TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("TEST_DATABASE_URL is not set")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	pool, err := pgxpool.New(ctx, databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		t.Fatal(err)
+	}
+	applyTestMigrations(t, ctx, pool)
+	resetTestData(t, ctx, pool)
+
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	repository := NewPostgresRepositoryWithSourceMode(pool, 48*time.Hour, "stm")
+	vehicleSnapshotID, inserted, err := repository.InsertSnapshot(ctx, domain.FeedSnapshot{
+		FeedType:    domain.FeedTypeVehiclePositions,
+		RecordedAt:  now,
+		PayloadHash: domain.HashPayload([]byte("stale-vehicle-snapshot")),
+		SourceMode:  "stm",
+	})
+	if err != nil || !inserted {
+		t.Fatalf("vehicle snapshot = id %d, inserted %t, err %v", vehicleSnapshotID, inserted, err)
+	}
+	predictionSnapshotID, inserted, err := repository.InsertSnapshot(ctx, domain.FeedSnapshot{
+		FeedType:    domain.FeedTypeTripUpdates,
+		RecordedAt:  now,
+		PayloadHash: domain.HashPayload([]byte("fresh-prediction-snapshot")),
+		SourceMode:  "stm",
+	})
+	if err != nil || !inserted {
+		t.Fatalf("prediction snapshot = id %d, inserted %t, err %v", predictionSnapshotID, inserted, err)
+	}
+
+	if _, err := repository.InsertEvents(ctx, vehicleSnapshotID, []domain.Event{{
+		Kind:       domain.EventKindVehiclePosition,
+		EntityID:   "stale-vehicle-entity",
+		RecordedAt: now.Add(-2 * time.Hour),
+		VehicleID:  "stale-bus",
+		TripID:     "trip-live",
+		RouteID:    "51",
+		Latitude:   45.5017,
+		Longitude:  -73.5673,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.InsertEvents(ctx, predictionSnapshotID, []domain.Event{{
+		Kind:         domain.EventKindPrediction,
+		EntityID:     "fresh-prediction-entity",
+		RecordedAt:   now,
+		VehicleID:    "stale-bus",
+		TripID:       "trip-live",
+		RouteID:      "51",
+		StopID:       "stop-live",
+		PredictedAt:  now.Add(3 * time.Minute),
+		DelaySeconds: 180,
+		HasDelay:     true,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	vehicles, err := repository.LatestVehicles(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(vehicles) != 1 || !vehicles[0].HasDelay || vehicles[0].DelaySeconds != 180 {
+		t.Fatalf("latest vehicles = %+v, want stale position enriched with fresh +180 second prediction", vehicles)
+	}
+}
+
 func resetTestData(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
 	t.Helper()
 	if _, err := pool.Exec(ctx, `
