@@ -28,3 +28,22 @@ func TestOrderedMigrationFilesReturnsOnlySortedSQLFiles(t *testing.T) {
 		t.Fatalf("orderedMigrationFiles() = %#v, want %#v", files, want)
 	}
 }
+
+func TestLegacyBaselineVersionsStopsAtKnownSchemaVersion(t *testing.T) {
+	files := []string{
+		filepath.Join("migrations", "001_extensions.sql"),
+		filepath.Join("migrations", "002_static_gtfs.sql"),
+		filepath.Join("migrations", "007_source_mode.sql"),
+		filepath.Join("migrations", "008_future_change.sql"),
+	}
+
+	got := legacyBaselineVersions(files)
+	want := []string{
+		"001_extensions.sql",
+		"002_static_gtfs.sql",
+		"007_source_mode.sql",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("legacyBaselineVersions() = %#v, want %#v", got, want)
+	}
+}

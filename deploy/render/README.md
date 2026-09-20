@@ -17,8 +17,10 @@ et TimescaleDB.
 3. Ne committe jamais cette chaîne : elle contient le mot de passe PostgreSQL.
 
 Le démarrage Render exécute automatiquement les fichiers de `db/migrations` dans
-Supabase. Le schéma fonctionne avec PostgreSQL standard; TimescaleDB reste une
-optimisation uniquement lorsqu’elle est disponible localement.
+Supabase et conserve un historique pour ne pas rejouer les migrations déjà
+appliquées lors des redéploiements. Le schéma fonctionne avec PostgreSQL
+standard; TimescaleDB reste une optimisation uniquement lorsqu’elle est
+disponible localement.
 
 ## 2. Créer Render
 
