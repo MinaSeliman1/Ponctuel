@@ -162,12 +162,19 @@ func (r *PostgresRepository) InsertEvents(ctx context.Context, snapshotID int64,
 			if predictedAt.IsZero() {
 				return 0, fmt.Errorf("insert event %d: predicted_at is required", index)
 			}
+			if !event.HasDelay {
+				derivedDelay, deriveErr := deriveScheduleDelay(ctx, transaction, event, predictedAt)
+				if deriveErr != nil {
+					return 0, fmt.Errorf("derive event %d schedule delay: %w", index, deriveErr)
+				}
+				delay = derivedDelay
+			}
 			_, err = transaction.Exec(ctx, `
 				INSERT INTO prediction
 					(snapshot_id, entity_id, recorded_at, service_date, vehicle_id, trip_id,
 					 route_id, stop_id, stop_sequence, predicted_at, delay_seconds)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-			`, snapshotID, event.EntityID, event.RecordedAt, predictedAt.UTC().Format("2006-01-02"), nullableString(event.VehicleID), event.TripID, nullableString(event.RouteID), event.StopID, event.StopSequence, predictedAt, delay)
+				VALUES ($1, $2, $3, (($9::timestamptz AT TIME ZONE 'America/Toronto')::date), $4, $5, $6, $7, $8, $9, $10)
+			`, snapshotID, event.EntityID, event.RecordedAt, nullableString(event.VehicleID), event.TripID, nullableString(event.RouteID), event.StopID, event.StopSequence, predictedAt, delay)
 		default:
 			return 0, fmt.Errorf("insert event %d: unsupported kind %q", index, event.Kind)
 		}
@@ -180,6 +187,43 @@ func (r *PostgresRepository) InsertEvents(ctx context.Context, snapshotID int64,
 		return 0, fmt.Errorf("commit event transaction: %w", err)
 	}
 	return inserted, nil
+}
+
+func deriveScheduleDelay(ctx context.Context, transaction pgx.Tx, event domain.Event, predictedAt time.Time) (any, error) {
+	var delay pgtype.Int4
+	err := transaction.QueryRow(ctx, `
+		WITH scheduled AS (
+			SELECT
+				(
+					(
+						(($1::timestamptz AT TIME ZONE 'America/Toronto')::date
+						 + COALESCE(stop_time.arrival_seconds, stop_time.departure_seconds) * INTERVAL '1 second')
+						AT TIME ZONE 'America/Toronto'
+					)
+				) AS scheduled_at
+			FROM gtfs_stop_time AS stop_time
+			JOIN gtfs_feed_version AS feed_version
+			  ON feed_version.feed_version = stop_time.feed_version
+			WHERE stop_time.trip_id = $2
+			  AND stop_time.stop_id = $3
+			  AND ($4::integer = 0 OR stop_time.stop_sequence = $4::integer)
+			  AND COALESCE(stop_time.arrival_seconds, stop_time.departure_seconds) IS NOT NULL
+			ORDER BY feed_version.retrieved_at DESC, feed_version.feed_version DESC
+			LIMIT 1
+		)
+		SELECT EXTRACT(EPOCH FROM ($1::timestamptz - scheduled_at))::integer
+		FROM scheduled
+	`, predictedAt.UTC(), event.TripID, event.StopID, event.StopSequence).Scan(&delay)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if !delay.Valid {
+		return nil, nil
+	}
+	return delay.Int32, nil
 }
 
 func (r *PostgresRepository) CountEvents(ctx context.Context) (int64, error) {
