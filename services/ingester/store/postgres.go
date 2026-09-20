@@ -267,6 +267,7 @@ func (r *PostgresRepository) LatestVehicles(ctx context.Context) ([]domain.Vehic
 		return nil, fmt.Errorf("PostgreSQL repository is not initialized")
 	}
 	cutoff := time.Now().UTC().Add(-r.freshnessWindow)
+	freshPredictionCutoff := time.Now().UTC().Add(-15 * time.Minute)
 	rows, err := r.pool.Query(ctx, `
 		SELECT
 			vehicle.vehicle_id,
@@ -281,9 +282,14 @@ func (r *PostgresRepository) LatestVehicles(ctx context.Context) ([]domain.Vehic
 		LEFT JOIN LATERAL (
 			SELECT prediction.delay_seconds
 			FROM prediction
+			JOIN feed_snapshot AS prediction_snapshot ON prediction_snapshot.snapshot_id = prediction.snapshot_id
 			WHERE prediction.delay_seconds IS NOT NULL
-			  AND prediction.recorded_at BETWEEN vehicle.recorded_at - INTERVAL '5 minutes'
-			                                AND vehicle.recorded_at + INTERVAL '5 minutes'
+			  AND prediction_snapshot.source_mode = $2
+			  AND (
+				prediction.recorded_at BETWEEN vehicle.recorded_at - INTERVAL '5 minutes'
+				                           AND vehicle.recorded_at + INTERVAL '5 minutes'
+				OR prediction.recorded_at >= $3
+			  )
 			  AND (
 				prediction.trip_id = vehicle.trip_id
 				OR prediction.vehicle_id = vehicle.vehicle_id
@@ -300,7 +306,7 @@ func (r *PostgresRepository) LatestVehicles(ctx context.Context) ([]domain.Vehic
 		WHERE vehicle.recorded_at >= $1
 		  AND snapshot.source_mode = $2
 		ORDER BY vehicle.recorded_at DESC, vehicle.vehicle_id
-	`, cutoff, r.sourceMode)
+	`, cutoff, r.sourceMode, freshPredictionCutoff)
 	if err != nil {
 		return nil, fmt.Errorf("query latest vehicles: %w", err)
 	}
