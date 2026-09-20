@@ -199,25 +199,32 @@ func deriveScheduleDelay(ctx context.Context, transaction pgx.Tx, event domain.E
 						(($1::timestamptz AT TIME ZONE 'America/Toronto')::date
 						 + COALESCE(stop_time.arrival_seconds, stop_time.departure_seconds) * INTERVAL '1 second')
 						AT TIME ZONE 'America/Toronto'
-					)
-				) AS scheduled_at
+				)
+				) AS scheduled_at,
+				CASE
+					WHEN stop_time.stop_id = $3 AND ($4::integer = 0 OR stop_time.stop_sequence = $4::integer) THEN 0
+					WHEN $4::integer > 0 AND stop_time.stop_sequence = $4::integer THEN 1
+					ELSE 2
+				END AS match_priority
 			FROM gtfs_stop_time AS stop_time
 			JOIN gtfs_feed_version AS feed_version
 			  ON feed_version.feed_version = stop_time.feed_version
 			WHERE stop_time.trip_id = $2
-			  AND (
-				(stop_time.stop_id = $3 AND ($4::integer = 0 OR stop_time.stop_sequence = $4::integer))
-				OR ($4::integer > 0 AND stop_time.stop_sequence = $4::integer)
-			  )
 			  AND COALESCE(stop_time.arrival_seconds, stop_time.departure_seconds) IS NOT NULL
+		), selected AS (
+			SELECT scheduled_at
+			FROM scheduled
 			ORDER BY
-				CASE WHEN stop_time.stop_id = $3 THEN 0 ELSE 1 END,
-				feed_version.retrieved_at DESC,
-				feed_version.feed_version DESC
+				match_priority,
+				CASE WHEN match_priority = 2
+					THEN ABS(EXTRACT(EPOCH FROM ($1::timestamptz - scheduled_at))::numeric)
+					ELSE 0
+				END,
+				scheduled_at
 			LIMIT 1
 		)
 		SELECT EXTRACT(EPOCH FROM ($1::timestamptz - scheduled_at))::integer
-		FROM scheduled
+		FROM selected
 	`, predictedAt.UTC(), event.TripID, event.StopID, event.StopSequence).Scan(&delay)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
